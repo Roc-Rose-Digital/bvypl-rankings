@@ -751,11 +751,11 @@ function renderResults() {
     });
     
     let html = '';
-    // Sort rounds numerically by extracting the round number
+    // Sort rounds numerically in descending order (most recent first)
     Object.keys(resultsByRound).sort((a, b) => {
         const numA = parseInt(a.match(/\d+/)?.[0] || '0');
         const numB = parseInt(b.match(/\d+/)?.[0] || '0');
-        return numA - numB;
+        return numB - numA;
     }).forEach(round => {
         html += `
             <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
