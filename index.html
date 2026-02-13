@@ -29,17 +29,21 @@
             <div class="container mx-auto px-4 py-6">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 class="text-3xl font-bold">Boys Victorian Youth Rankings</h1>
-                        <p class="text-blue-100 mt-2">Junior Boys Competition 2026</p>
+                        <h1 class="text-3xl font-bold">Victorian Youth Rankings</h1>
+                        <p class="text-blue-100 mt-2">Junior Competition 2026</p>
                     </div>
                     <div class="mt-4 md:mt-0 flex gap-3 items-end">
                         <div>
-                            <label class="block text-sm font-semibold mb-2">Select Division</label>
+                            <label class="block text-sm font-semibold mb-2">Gender</label>
+                            <select id="gender-selector" class="px-4 py-2 rounded bg-white text-gray-800 font-semibold border-2 border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                <option value="boys">Boys</option>
+                                <option value="girls">Girls</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Division</label>
                             <select id="division-selector" class="px-4 py-2 rounded bg-white text-gray-800 font-semibold border-2 border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                <option value="bgdMX6MDKE">Boys Victorian Youth Premier League 1</option>
-                                <option value="Bjma0zXAdR">Boys Victorian Youth Premier League 2</option>
-                                <option value="AnmYznkyNz">Boys Victorian Youth State League North-West</option>
-                                <option value="2PmjO2pANZ">Boys Victorian Youth State League South-East</option>
+                                <!-- Options will be populated by JavaScript based on gender -->
                             </select>
                         </div>
                         <button id="refresh-button" onclick="refreshData()" class="px-4 py-2 rounded bg-white text-blue-600 font-semibold border-2 border-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors">

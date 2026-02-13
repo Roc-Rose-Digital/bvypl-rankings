@@ -3,23 +3,35 @@ let leaguesData = [];
 let fixturesData = [];
 let resultsData = [];
 let roundsData = [];
+let currentGender = 'boys'; // Default to boys
 let currentDivision = 'bgdMX6MDKE'; // Default to YPL1
 
-// Division configuration
+// Division configuration by gender
 const divisions = {
-    'bgdMX6MDKE': { name: 'YPL1', fullName: 'Boys Victorian Youth Premier League 1' },
-    'Bjma0zXAdR': { name: 'YPL2', fullName: 'Boys Victorian Youth Premier League 2' },
-    'AnmYznkyNz': { name: 'BVYSL NW', fullName: 'Boys Victorian Youth State League North-West' },
-    '2PmjO2pANZ': { name: 'BVYSL SE', fullName: 'Boys Victorian Youth State League South-East' }
+    boys: {
+        'bgdMX6MDKE': { name: 'YPL1', fullName: 'Boys Victorian Youth Premier League 1' },
+        'Bjma0zXAdR': { name: 'YPL2', fullName: 'Boys Victorian Youth Premier League 2' },
+        'AnmYznkyNz': { name: 'BVYSL NW', fullName: 'Boys Victorian Youth State League North-West' },
+        '2PmjO2pANZ': { name: 'BVYSL SE', fullName: 'Boys Victorian Youth State League South-East' }
+    },
+    girls: {
+        '3pmvQvbDdv': { name: 'YGPL', fullName: 'Girls Victorian Youth Premier League' }
+    }
 };
 
 // Load all data on page load
-async function loadData(divisionId = 'bgdMX6MDKE') {
+async function loadData(gender = 'boys', divisionId = null) {
     try {
+        currentGender = gender;
+        
+        // If no division specified, use first division for the gender
+        if (!divisionId) {
+            divisionId = Object.keys(divisions[gender])[0];
+        }
         currentDivision = divisionId;
         
         // Show loading message
-        document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${divisions[divisionId].fullName} data from API...</div>`;
+        document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${divisions[gender][divisionId].fullName} data from API...</div>`;
         
         const baseUrl = 'https://mc-api.dribl.com/api';
         const params = `date_range=default&season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
@@ -92,6 +104,20 @@ async function loadData(divisionId = 'bgdMX6MDKE') {
     }
 }
 
+// Populate division dropdown based on gender
+function populateDivisionDropdown(gender) {
+    const divisionSelector = document.getElementById('division-selector');
+    const genderDivisions = divisions[gender];
+    
+    let options = '';
+    Object.keys(genderDivisions).forEach(divisionId => {
+        options += `<option value="${divisionId}">${genderDivisions[divisionId].fullName}</option>`;
+    });
+    
+    divisionSelector.innerHTML = options;
+    divisionSelector.value = Object.keys(genderDivisions)[0];
+}
+
 // Refresh data for current division
 async function refreshData() {
     const refreshButton = document.getElementById('refresh-button');
@@ -111,8 +137,8 @@ async function refreshData() {
     }
     
     try {
-        // Reload data for current division
-        await loadData(currentDivision);
+        // Reload data for current gender and division
+        await loadData(currentGender, currentDivision);
     } catch (error) {
         console.error('Error refreshing data:', error);
         alert('Failed to refresh data. Please try again.');
@@ -131,11 +157,22 @@ function initializeApp() {
     renderFixtures();
     renderResults();
     
+    // Add gender selector event listener
+    const genderSelector = document.getElementById('gender-selector');
+    genderSelector.value = currentGender;
+    genderSelector.addEventListener('change', (e) => {
+        const newGender = e.target.value;
+        populateDivisionDropdown(newGender);
+        const firstDivision = Object.keys(divisions[newGender])[0];
+        loadData(newGender, firstDivision);
+    });
+    
     // Add division selector event listener
     const divisionSelector = document.getElementById('division-selector');
+    populateDivisionDropdown(currentGender);
     divisionSelector.value = currentDivision;
     divisionSelector.addEventListener('change', (e) => {
-        loadData(e.target.value);
+        loadData(currentGender, e.target.value);
     });
     
     // Show combined ladder by default
@@ -834,4 +871,6 @@ function renderResults() {
 }
 
 // Load data when page loads
-window.addEventListener('DOMContentLoaded', () => loadData('bgdMX6MDKE'));
+window.addEventListener('DOMContentLoaded', () => {
+    loadData('boys', 'bgdMX6MDKE');
+});
