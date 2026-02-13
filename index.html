@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPL Rankings - Boys Victorian Youth Premier League 1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-active {
+            border-bottom: 3px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+        .ladder-row:hover {
+            background-color: #f3f4f6;
+        }
+        .promoted {
+            background-color: #dcfce7;
+        }
+        .relegated {
+            background-color: #fee2e2;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white shadow-lg">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold">VPL Rankings 2026</h1>
+                        <p class="text-blue-100 mt-2">Junior Boys Competition</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-3 items-end">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Select Division</label>
+                            <select id="division-selector" class="px-4 py-2 rounded bg-white text-gray-800 font-semibold border-2 border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                <option value="bgdMX6MDKE">Boys Victorian Youth Premier League 1</option>
+                                <option value="Bjma0zXAdR">Boys Victorian Youth Premier League 2</option>
+                                <option value="AnmYznkyNz">Boys Victorian Youth State League North-West</option>
+                                <option value="2PmjO2pANZ">Boys Victorian Youth State League South-East</option>
+                            </select>
+                        </div>
+                        <button id="refresh-button" onclick="refreshData()" class="px-4 py-2 rounded bg-white text-blue-600 font-semibold border-2 border-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors">
+                            <span id="refresh-icon">↻</span> Refresh Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="bg-white shadow-md sticky top-0 z-10">
+            <div class="container mx-auto px-4">
+                <div class="flex space-x-8 overflow-x-auto">
+                    <button onclick="showTab('combined')" id="tab-combined" class="py-4 px-2 whitespace-nowrap tab-active">
+                        Combined Club Ladder
+                    </button>
+                    <button onclick="showTab('ladders')" id="tab-ladders" class="py-4 px-2 whitespace-nowrap hover:text-blue-600">
+                        Age Group Ladders
+                    </button>
+                    <button onclick="showTab('fixtures')" id="tab-fixtures" class="py-4 px-2 whitespace-nowrap hover:text-blue-600">
+                        Fixtures
+                    </button>
+                    <button onclick="showTab('results')" id="tab-results" class="py-4 px-2 whitespace-nowrap hover:text-blue-600">
+                        Results
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Combined Club Ladder Tab -->
+            <div id="content-combined" class="tab-content">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Combined Club Ladder</h2>
+                    <p class="text-gray-600 mb-4">Aggregate standings across all age groups (U13, U14, U15, U16, U18)</p>
+                    <div class="mb-4 flex gap-4 text-sm">
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
+                            <span>Promotion Zone (Top 2 stay in BVYPL1)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
+                            <span>Relegation Zone (Bottom 2 to BVYPL2)</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="combined-ladder" class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="text-center py-8 text-gray-500">Loading combined ladder...</div>
+                </div>
+            </div>
+
+            <!-- Age Group Ladders Tab -->
+            <div id="content-ladders" class="tab-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Age Group Ladders</h2>
+                    <div class="flex flex-wrap gap-2" id="age-group-filters">
+                        <!-- Age group buttons will be inserted here -->
+                    </div>
+                </div>
+                <div id="age-group-ladders">
+                    <div class="text-center py-8 text-gray-500">Loading ladders...</div>
+                </div>
+            </div>
+
+            <!-- Fixtures Tab -->
+            <div id="content-fixtures" class="tab-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Fixtures</h2>
+                    <div class="flex flex-col md:flex-row md:items-end gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Age Group</label>
+                            <div id="fixture-age-group-filters" class="flex flex-wrap gap-2">
+                                <!-- Age group buttons will be inserted here -->
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Round</label>
+                            <select id="fixture-round-dropdown" class="border rounded px-4 py-2 w-full md:w-auto">
+                                <option value="">All Rounds</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="fixtures-list">
+                    <div class="text-center py-8 text-gray-500">Loading fixtures...</div>
+                </div>
+            </div>
+
+            <!-- Results Tab -->
+            <div id="content-results" class="tab-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">Results</h2>
+                    <div class="flex flex-col md:flex-row md:items-end gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Age Group</label>
+                            <div id="result-age-group-filters" class="flex flex-wrap gap-2">
+                                <!-- Age group buttons will be inserted here -->
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Round</label>
+                            <select id="result-round-dropdown" class="border rounded px-4 py-2 w-full md:w-auto">
+                                <option value="">All Rounds</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="results-list">
+                    <div class="text-center py-8 text-gray-500">Loading results...</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white mt-12 py-6">
+            <div class="container mx-auto px-4 text-center">
+                <p class="text-gray-400">Data from Dribl API - Data from Football Victoria API | 2026 Season</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

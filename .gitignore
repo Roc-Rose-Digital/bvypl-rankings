@@ -1,0 +1,16 @@
+# Local API response cache (optional - you may want to keep these)
+# api-responses/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fetch All Age Group Data</title>
+</head>
+<body>
+    <h1>Fetching Data...</h1>
+    <pre id="output"></pre>
+    
+    <script>
+    const output = document.getElementById('output');
+    
+    async function fetchAllData() {
+        try {
+            output.textContent += 'Fetching fixtures for all age groups...\n';
+            
+            // Fetch fixtures for each age group
+            const leagueIds = {
+                'U13': '6lNb5eGymx',
+                'U14': 'bgdMnW1bmE',
+                'U15': 'Bjma89RGdR',
+                'U16': '3pmvkn5ENv',
+                'U18': 'AnmY0vMDdz'
+            };
+            
+            const baseUrl = 'https://mc-api.dribl.com/api';
+            const params = 'date_range=default&season=nPmrj2rmow&competition=bgdMX6MDKE&tenant=w8zdBWPmBX&timezone=Australia/Sydney';
+            
+            let allFixtures = [];
+            let allResults = [];
+            
+            // Fetch fixtures for each league
+            for (const [age, leagueId] of Object.entries(leagueIds)) {
+                output.textContent += `Fetching ${age} fixtures...\n`;
+                const fixturesUrl = `${baseUrl}/fixtures?${params}&league=${leagueId}`;
+                const fixturesResponse = await fetch(fixturesUrl);
+                const fixturesData = await fixturesResponse.json();
+                allFixtures = allFixtures.concat(fixturesData.data || []);
+                
+                output.textContent += `Fetching ${age} results...\n`;
+                const resultsUrl = `${baseUrl}/results?${params}&league=${leagueId}`;
+                const resultsResponse = await fetch(resultsUrl);
+                const resultsData = await resultsResponse.json();
+                allResults = allResults.concat(resultsData.data || []);
+            }
+            
+            output.textContent += `\nTotal fixtures: ${allFixtures.length}\n`;
+            output.textContent += `Total results: ${allResults.length}\n\n`;
+            
+            // Create combined data structures
+            const fixturesJson = JSON.stringify({ data: allFixtures }, null, 2);
+            const resultsJson = JSON.stringify({ data: allResults }, null, 2);
+            
+            // Create download links
+            const fixturesBlob = new Blob([fixturesJson], { type: 'application/json' });
+            const resultsBlob = new Blob([resultsJson], { type: 'application/json' });
+            
+            const fixturesUrl = URL.createObjectURL(fixturesBlob);
+            const resultsUrl = URL.createObjectURL(resultsBlob);
+            
+            const fixturesLink = document.createElement('a');
+            fixturesLink.href = fixturesUrl;
+            fixturesLink.download = 'fixtures-api.json';
+            fixturesLink.textContent = 'Download fixtures-api.json';
+            fixturesLink.style.display = 'block';
+            fixturesLink.style.marginTop = '20px';
+            document.body.appendChild(fixturesLink);
+            
+            const resultsLink = document.createElement('a');
+            resultsLink.href = resultsUrl;
+            resultsLink.download = 'results-api.json';
+            resultsLink.textContent = 'Download results-api.json';
+            resultsLink.style.display = 'block';
+            resultsLink.style.marginTop = '10px';
+            document.body.appendChild(resultsLink);
+            
+            output.textContent += 'Done! Click the links above to download the files.\n';
+            output.textContent += 'Then replace the files in the api-responses folder.';
+            
+        } catch (error) {
+            output.textContent += `Error: ${error.message}\n`;
+        }
+    }
+    
+    fetchAllData();
+    </script>
+</body>
+</html>
