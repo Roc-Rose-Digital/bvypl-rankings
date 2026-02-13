@@ -104,6 +104,29 @@ async function loadData(gender = 'boys', divisionId = null) {
     }
 }
 
+// Update ladder description based on gender
+function updateLadderDescription(gender) {
+    const descriptionEl = document.getElementById('ladder-description');
+    const zonesEl = document.getElementById('ladder-zones');
+    
+    if (gender === 'boys') {
+        descriptionEl.textContent = 'Aggregate standings across all age groups (U13, U14, U15, U16, U18)';
+        zonesEl.innerHTML = `
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
+                <span>Promotion Zone (Top 2 stay in BVYPL1)</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
+                <span>Relegation Zone (Bottom 2 to BVYPL2)</span>
+            </div>
+        `;
+    } else {
+        descriptionEl.textContent = 'Aggregate standings across all age groups (U13, U15, U17)';
+        zonesEl.innerHTML = ''; // No promotion/relegation for girls
+    }
+}
+
 // Populate division dropdown based on gender
 function populateDivisionDropdown(gender) {
     const divisionSelector = document.getElementById('division-selector');
@@ -116,6 +139,9 @@ function populateDivisionDropdown(gender) {
     
     divisionSelector.innerHTML = options;
     divisionSelector.value = Object.keys(genderDivisions)[0];
+    
+    // Update ladder description when gender changes
+    updateLadderDescription(gender);
 }
 
 // Refresh data for current division
@@ -156,6 +182,9 @@ function initializeApp() {
     renderAgeGroupLadders();
     renderFixtures();
     renderResults();
+    
+    // Update ladder description for initial gender
+    updateLadderDescription(currentGender);
     
     // Add gender selector event listener
     const genderSelector = document.getElementById('gender-selector');

@@ -80,20 +80,13 @@
             <div id="content-combined" class="tab-content">
                 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                     <h2 class="text-2xl font-bold mb-4">Combined Club Ladder</h2>
-                    <p class="text-gray-600 mb-4">Aggregate standings across all age groups (U13, U14, U15, U16, U18)</p>
-                    <div class="mb-4 flex gap-4 text-sm">
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
-                            <span>Promotion Zone (Top 2 stay in BVYPL1)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
-                            <span>Relegation Zone (Bottom 2 to BVYPL2)</span>
-                        </div>
+                    <p id="ladder-description" class="text-gray-600 mb-4">Aggregate standings across all age groups</p>
+                    <div id="ladder-zones" class="mb-4 flex gap-4 text-sm">
+                        <!-- Promotion/Relegation zones will be populated by JavaScript based on gender -->
                     </div>
                 </div>
-                <div id="combined-ladder" class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="text-center py-8 text-gray-500">Loading combined ladder...</div>
+                <div id="combined-ladder">
+                    <div class="text-center py-8 text-gray-500">Loading ladder...</div>
                 </div>
             </div>
 
