@@ -120,16 +120,28 @@ function updateLadderDescription(gender) {
                     <span>Relegation (Bottom 2 to BVYPL2)</span>
                 </div>
             `;
-        } else {
-            // Other boys divisions: show both promotion and relegation zones
+        } else if (currentDivision === 'Bjma0zXAdR') {
+            // BVYPL2: promotion to BVYPL1, relegation to BYSL
             zonesEl.innerHTML = `
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
-                    <span>Promotion (Top 2 promoted)</span>
+                    <span>Promotion (Top 2 to BVYPL1)</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
-                    <span>Relegation (Bottom 2 relegated)</span>
+                    <span>Relegation (Bottom 2 to BYSL)</span>
+                </div>
+            `;
+        } else {
+            // BYSL divisions: promotion to BVYPL2, relegation out of pyramid
+            zonesEl.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
+                    <span>Promotion (Top 2 to BVYPL2)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
+                    <span>Relegation (Bottom 2 out of pyramid)</span>
                 </div>
             `;
         }
