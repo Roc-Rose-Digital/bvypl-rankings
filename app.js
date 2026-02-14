@@ -137,11 +137,11 @@ function updateLadderDescription(gender) {
             zonesEl.innerHTML = `
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
-                    <span>Promotion (Top 2 to BVYPL2)</span>
+                    <span>Promotion (1st place to BVYPL2)</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
-                    <span>Relegation (Bottom 2 out of pyramid)</span>
+                    <span>Relegation (Last place out of pyramid)</span>
                 </div>
             `;
         }
@@ -546,18 +546,26 @@ function renderCombinedLadder() {
         // Highlight promotion/relegation zones based on gender and division
         // Girls league: no colors (no promotion/relegation)
         // BVYPL1 (bgdMX6MDKE): only relegation zone (bottom 2) - no promotion from top division
-        // Other boys divisions: both promotion and relegation zones
+        // BVYPL2 (Bjma0zXAdR): top 2 promoted, bottom 2 relegated
+        // BYSL (AnmYznkyNz, 2PmjO2pANZ): only 1st promoted, only last relegated
         if (currentGender === 'boys') {
             if (currentDivision === 'bgdMX6MDKE') {
                 // BVYPL1: only show relegation zone (bottom 2)
                 if (position >= 15) {
                     rowClass += ' relegated';
                 }
-            } else {
-                // Other boys divisions: show both zones
+            } else if (currentDivision === 'Bjma0zXAdR') {
+                // BVYPL2: top 2 promoted, bottom 2 relegated
                 if (position <= 2) {
                     rowClass += ' promoted';
                 } else if (position >= 15) {
+                    rowClass += ' relegated';
+                }
+            } else {
+                // BYSL divisions: only 1st place promoted, only last place relegated (10 teams)
+                if (position === 1) {
+                    rowClass += ' promoted';
+                } else if (position >= ladder.length) {
                     rowClass += ' relegated';
                 }
             }
