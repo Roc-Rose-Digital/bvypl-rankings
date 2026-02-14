@@ -723,7 +723,7 @@ function renderFixtures() {
             const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
             
             html += `
-                <div class="p-4 hover:bg-gray-50 border-b border-gray-100">
+                <div class="p-6 hover:bg-gray-50 border-b border-gray-100">
                     <div class="flex items-center gap-4">
                         <!-- Date and Time -->
                         <div class="text-sm text-gray-600 w-32">
@@ -835,7 +835,7 @@ function renderResults() {
             const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             
             html += `
-                <div class="p-4 hover:bg-gray-50 border-b border-gray-100">
+                <div class="p-6 hover:bg-gray-50 border-b border-gray-100">
                     <div class="flex items-center gap-4">
                         <!-- Date -->
                         <div class="text-sm text-gray-600 w-32">
