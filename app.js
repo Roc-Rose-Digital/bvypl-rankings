@@ -426,8 +426,8 @@ function calculateLadder(leagueName) {
 
 // Extract club name from team name (remove age group suffix)
 function getClubName(teamName) {
-    // Remove U13, U14, U15, U16, U18 suffixes
-    return teamName.replace(/\s+(U13|U14|U15|U16|U18)$/i, '').trim();
+    // Remove U13, U14, U15, U16, U17, U18 suffixes
+    return teamName.replace(/\s+(U13|U14|U15|U16|U17|U18)$/i, '').trim();
 }
 
 // Calculate combined club ladder
