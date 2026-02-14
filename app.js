@@ -117,7 +117,7 @@ function updateLadderDescription(gender) {
             zonesEl.innerHTML = `
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
-                    <span>Relegation Zone (Bottom 2 to BVYPL2)</span>
+                    <span>Relegation (Bottom 2 to BVYPL2)</span>
                 </div>
             `;
         } else {
@@ -125,11 +125,11 @@ function updateLadderDescription(gender) {
             zonesEl.innerHTML = `
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
-                    <span>Promotion Zone (Top 2 promoted)</span>
+                    <span>Promotion (Top 2 promoted)</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
-                    <span>Relegation Zone (Bottom 2 relegated)</span>
+                    <span>Relegation (Bottom 2 relegated)</span>
                 </div>
             `;
         }
