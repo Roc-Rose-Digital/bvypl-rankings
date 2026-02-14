@@ -715,13 +715,6 @@ function renderFixtures() {
         Object.keys(fixturesByRound[round]).sort().forEach(matchupKey => {
             const matchupFixtures = fixturesByRound[round][matchupKey];
             
-            // Display matchup header
-            html += `
-                <div class="p-4 bg-gray-50">
-                    <h4 class="font-semibold text-gray-700">${matchupKey}</h4>
-                </div>
-            `;
-            
             // Display all age group fixtures for this matchup
             matchupFixtures.forEach(fixture => {
             const attrs = fixture.attributes;
@@ -834,13 +827,6 @@ function renderResults() {
         // Sort matchups alphabetically
         Object.keys(resultsByRound[round]).sort().forEach(matchupKey => {
             const matchupResults = resultsByRound[round][matchupKey];
-            
-            // Display matchup header
-            html += `
-                <div class="p-4 bg-gray-50">
-                    <h4 class="font-semibold text-gray-700">${matchupKey}</h4>
-                </div>
-            `;
             
             // Display all age group results for this matchup
             matchupResults.forEach(result => {
