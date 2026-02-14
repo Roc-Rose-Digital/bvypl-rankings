@@ -111,16 +111,28 @@ function updateLadderDescription(gender) {
     
     if (gender === 'boys') {
         descriptionEl.textContent = 'Aggregate standings across all age groups (U13, U14, U15, U16, U18)';
-        zonesEl.innerHTML = `
-            <div class="flex items-center gap-2">
-                <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
-                <span>Promotion Zone (Top 2 stay in BVYPL1)</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
-                <span>Relegation Zone (Bottom 2 to BVYPL2)</span>
-            </div>
-        `;
+        
+        // BVYPL1: only show relegation zone (no promotion from top division)
+        if (currentDivision === 'bgdMX6MDKE') {
+            zonesEl.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
+                    <span>Relegation Zone (Bottom 2 to BVYPL2)</span>
+                </div>
+            `;
+        } else {
+            // Other boys divisions: show both promotion and relegation zones
+            zonesEl.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-green-200 border border-green-300"></div>
+                    <span>Promotion Zone (Top 2 promoted)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-red-200 border border-red-300"></div>
+                    <span>Relegation Zone (Bottom 2 relegated)</span>
+                </div>
+            `;
+        }
     } else {
         descriptionEl.textContent = 'Aggregate standings across all age groups (U13, U15, U17)';
         zonesEl.innerHTML = ''; // No promotion/relegation for girls
@@ -519,12 +531,26 @@ function renderCombinedLadder() {
         const position = index + 1;
         let rowClass = 'ladder-row';
         
-        // Highlight promotion/relegation zones (assuming 16 teams)
-        if (position <= 2) {
-            rowClass += ' promoted';
-        } else if (position >= 15) {
-            rowClass += ' relegated';
+        // Highlight promotion/relegation zones based on gender and division
+        // Girls league: no colors (no promotion/relegation)
+        // BVYPL1 (bgdMX6MDKE): only relegation zone (bottom 2) - no promotion from top division
+        // Other boys divisions: both promotion and relegation zones
+        if (currentGender === 'boys') {
+            if (currentDivision === 'bgdMX6MDKE') {
+                // BVYPL1: only show relegation zone (bottom 2)
+                if (position >= 15) {
+                    rowClass += ' relegated';
+                }
+            } else {
+                // Other boys divisions: show both zones
+                if (position <= 2) {
+                    rowClass += ' promoted';
+                } else if (position >= 15) {
+                    rowClass += ' relegated';
+                }
+            }
         }
+        // Girls league: no colors applied
         
         html += `
             <tr class="${rowClass}">
