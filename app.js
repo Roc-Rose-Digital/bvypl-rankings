@@ -368,11 +368,14 @@ function toggleCombinedAgeGroup(leagueId) {
         if (selectedCombinedAgeGroups.size === 1) return;
         selectedCombinedAgeGroups.delete(leagueId);
     } else {
-        // If all were selected (empty set), switch to explicit selection
         if (selectedCombinedAgeGroups.size === 0) {
-            leaguesData.forEach(l => selectedCombinedAgeGroups.add(l.id));
+            // All were selected — switch to all except the clicked one
+            leaguesData.forEach(l => {
+                if (l.id !== leagueId) selectedCombinedAgeGroups.add(l.id);
+            });
+        } else {
+            selectedCombinedAgeGroups.add(leagueId);
         }
-        selectedCombinedAgeGroups.add(leagueId);
     }
     updateCombinedAgeGroupButtons();
     renderCombinedLadder();
