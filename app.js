@@ -251,6 +251,7 @@ function showTab(tabName) {
 
 // Populate filter dropdowns
 function populateFilters() {
+    populateCombinedLadderFilters();
     // Get unique rounds from fixtures (pending matches only)
     const fixtureRounds = new Set();
     fixturesData.forEach(fixture => {
@@ -337,6 +338,65 @@ let selectedFixtureLeague = '';
 let selectedResultLeague = '';
 let selectedFixtureRound = '';
 let selectedResultRound = '';
+let selectedCombinedAgeGroups = new Set(); // empty = all selected
+
+// Populate combined ladder age group toggle buttons
+function populateCombinedLadderFilters() {
+    selectedCombinedAgeGroups = new Set(); // reset to "all" on data reload
+    const container = document.getElementById('combined-age-group-filters');
+    let html = `
+        <button onclick="selectAllCombinedAgeGroups()" id="combined-age-all-btn"
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            All
+        </button>
+    `;
+    leaguesData.forEach(league => {
+        html += `
+            <button onclick="toggleCombinedAgeGroup('${league.id}')" id="combined-age-btn-${league.id}"
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 combined-age-btn" data-league="${league.id}">
+                ${league.name}
+            </button>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// Toggle a single age group on the combined ladder
+function toggleCombinedAgeGroup(leagueId) {
+    if (selectedCombinedAgeGroups.has(leagueId)) {
+        // Don't allow deselecting the last one
+        if (selectedCombinedAgeGroups.size === 1) return;
+        selectedCombinedAgeGroups.delete(leagueId);
+    } else {
+        // If all were selected (empty set), switch to explicit selection
+        if (selectedCombinedAgeGroups.size === 0) {
+            leaguesData.forEach(l => selectedCombinedAgeGroups.add(l.id));
+        }
+        selectedCombinedAgeGroups.add(leagueId);
+    }
+    updateCombinedAgeGroupButtons();
+    renderCombinedLadder();
+}
+
+// Reset combined ladder to show all age groups
+function selectAllCombinedAgeGroups() {
+    selectedCombinedAgeGroups = new Set();
+    updateCombinedAgeGroupButtons();
+    renderCombinedLadder();
+}
+
+// Sync button styles to current selection state
+function updateCombinedAgeGroupButtons() {
+    const allSelected = selectedCombinedAgeGroups.size === 0;
+    const allBtn = document.getElementById('combined-age-all-btn');
+    if (allBtn) {
+        allBtn.className = `px-4 py-2 rounded hover:bg-blue-700 ${allSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
+    }
+    document.querySelectorAll('.combined-age-btn').forEach(btn => {
+        const active = allSelected || selectedCombinedAgeGroups.has(btn.dataset.league);
+        btn.className = `px-4 py-2 rounded hover:bg-blue-700 combined-age-btn ${active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
+    });
+}
 
 // Filter fixtures by age group
 function filterFixturesByAgeGroup(leagueId) {
@@ -458,8 +518,12 @@ function getClubName(teamName) {
 function calculateCombinedLadder() {
     const clubs = {};
     
-    // Process each age group
-    leaguesData.forEach(league => {
+    // Process each age group (filtered to selection; empty set = all)
+    const activeLeagues = selectedCombinedAgeGroups.size === 0
+        ? leaguesData
+        : leaguesData.filter(l => selectedCombinedAgeGroups.has(l.id));
+
+    activeLeagues.forEach(league => {
         const ladder = calculateLadder(league.name);
         
         ladder.forEach((team, index) => {
