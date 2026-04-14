@@ -345,14 +345,14 @@ function populateCombinedLadderFilters() {
     selectedCombinedAgeGroups = new Set(); // reset to "all" on data reload
     const container = document.getElementById('combined-age-group-filters');
     let html = `
-        <button onclick="selectAllCombinedAgeGroups()" id="combined-age-all-btn"
+        <button onclick="selectAllCombinedAgeGroups(this)" id="combined-age-all-btn"
             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             All
         </button>
     `;
     leaguesData.forEach(league => {
         html += `
-            <button onclick="toggleCombinedAgeGroup('${league.id}')" id="combined-age-btn-${league.id}"
+            <button onclick="toggleCombinedAgeGroup('${league.id}', this)" id="combined-age-btn-${league.id}"
                 class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 combined-age-btn" data-league="${league.id}">
                 ${league.name}
             </button>
@@ -362,7 +362,7 @@ function populateCombinedLadderFilters() {
 }
 
 // Toggle a single age group on the combined ladder
-function toggleCombinedAgeGroup(leagueId) {
+function toggleCombinedAgeGroup(leagueId, el) {
     if (selectedCombinedAgeGroups.has(leagueId)) {
         // Don't allow deselecting the last one
         if (selectedCombinedAgeGroups.size === 1) return;
@@ -379,13 +379,15 @@ function toggleCombinedAgeGroup(leagueId) {
     }
     updateCombinedAgeGroupButtons();
     renderCombinedLadder();
+    el.blur();
 }
 
 // Reset combined ladder to show all age groups
-function selectAllCombinedAgeGroups() {
+function selectAllCombinedAgeGroups(el) {
     selectedCombinedAgeGroups = new Set();
     updateCombinedAgeGroupButtons();
     renderCombinedLadder();
+    if (el) el.blur();
 }
 
 // Sync button styles and summary line to current selection state
