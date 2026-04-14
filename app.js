@@ -385,9 +385,10 @@ function selectAllCombinedAgeGroups() {
     renderCombinedLadder();
 }
 
-// Sync button styles to current selection state
+// Sync button styles and summary line to current selection state
 function updateCombinedAgeGroupButtons() {
     const allSelected = selectedCombinedAgeGroups.size === 0;
+
     const allBtn = document.getElementById('combined-age-all-btn');
     if (allBtn) {
         allBtn.className = `px-4 py-2 rounded hover:bg-blue-700 ${allSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
@@ -396,6 +397,22 @@ function updateCombinedAgeGroupButtons() {
         const active = allSelected || selectedCombinedAgeGroups.has(btn.dataset.league);
         btn.className = `px-4 py-2 rounded hover:bg-blue-700 combined-age-btn ${active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
     });
+
+    // Update summary line above the table
+    const summaryEl = document.getElementById('combined-ladder-summary');
+    const summaryTextEl = document.getElementById('combined-ladder-summary-text');
+    if (summaryEl && summaryTextEl) {
+        if (allSelected) {
+            summaryEl.classList.add('hidden');
+        } else {
+            const activeNames = leaguesData
+                .filter(l => selectedCombinedAgeGroups.has(l.id))
+                .map(l => l.name)
+                .join(', ');
+            summaryTextEl.textContent = `Showing: ${activeNames}`;
+            summaryEl.classList.remove('hidden');
+        }
+    }
 }
 
 // Filter fixtures by age group
