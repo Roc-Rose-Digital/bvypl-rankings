@@ -363,19 +363,16 @@ function populateCombinedLadderFilters() {
 
 // Toggle a single age group on the combined ladder
 function toggleCombinedAgeGroup(leagueId, el) {
-    if (selectedCombinedAgeGroups.has(leagueId)) {
-        // Don't allow deselecting the last one
+    if (selectedCombinedAgeGroups.size === 0) {
+        // All selected — isolate just the clicked one
+        selectedCombinedAgeGroups.add(leagueId);
+    } else if (selectedCombinedAgeGroups.has(leagueId)) {
+        // Already in selection — remove it, unless it's the last one
         if (selectedCombinedAgeGroups.size === 1) return;
         selectedCombinedAgeGroups.delete(leagueId);
     } else {
-        if (selectedCombinedAgeGroups.size === 0) {
-            // All were selected — switch to all except the clicked one
-            leaguesData.forEach(l => {
-                if (l.id !== leagueId) selectedCombinedAgeGroups.add(l.id);
-            });
-        } else {
-            selectedCombinedAgeGroups.add(leagueId);
-        }
+        // Add to existing selection
+        selectedCombinedAgeGroups.add(leagueId);
     }
     updateCombinedAgeGroupButtons();
     renderCombinedLadder();
