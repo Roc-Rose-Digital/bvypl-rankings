@@ -20,6 +20,12 @@
         .relegated {
             background-color: #fee2e2;
         }
+        /* Only apply hover background on devices that actually support hover (not touch screens) */
+        @media (hover: hover) {
+            .combined-age-btn:hover, #combined-age-all-btn:hover {
+                background-color: #1d4ed8;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50">

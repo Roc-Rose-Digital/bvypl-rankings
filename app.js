@@ -346,14 +346,14 @@ function populateCombinedLadderFilters() {
     const container = document.getElementById('combined-age-group-filters');
     let html = `
         <button onclick="selectAllCombinedAgeGroups(this)" id="combined-age-all-btn"
-            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            class="px-4 py-2 bg-blue-600 text-white rounded">
             All
         </button>
     `;
     leaguesData.forEach(league => {
         html += `
             <button onclick="toggleCombinedAgeGroup('${league.id}', this)" id="combined-age-btn-${league.id}"
-                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 combined-age-btn" data-league="${league.id}">
+                class="px-4 py-2 bg-blue-600 text-white rounded combined-age-btn" data-league="${league.id}">
                 ${league.name}
             </button>
         `;
@@ -396,11 +396,11 @@ function updateCombinedAgeGroupButtons() {
 
     const allBtn = document.getElementById('combined-age-all-btn');
     if (allBtn) {
-        allBtn.className = `px-4 py-2 rounded hover:bg-blue-700 ${allSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
+        allBtn.className = `px-4 py-2 rounded ${allSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
     }
     document.querySelectorAll('.combined-age-btn').forEach(btn => {
         const active = allSelected || selectedCombinedAgeGroups.has(btn.dataset.league);
-        btn.className = `px-4 py-2 rounded hover:bg-blue-700 combined-age-btn ${active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
+        btn.className = `px-4 py-2 rounded combined-age-btn ${active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`;
     });
 
     // Update summary line above the table
