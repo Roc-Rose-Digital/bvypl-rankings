@@ -20,11 +20,9 @@
         .relegated {
             background-color: #fee2e2;
         }
-        /* Only apply hover background on devices that actually support hover (not touch screens) */
-        @media (hover: hover) {
-            .combined-age-btn:hover, #combined-age-all-btn:hover {
-                background-color: #1d4ed8;
-            }
+        /* Suppress tap highlight on combined age group filter buttons */
+        .combined-age-btn, #combined-age-all-btn {
+            -webkit-tap-highlight-color: transparent;
         }
     </style>
 </head>
