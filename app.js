@@ -1020,7 +1020,9 @@ function renderResults() {
     container.innerHTML = html;
 }
 
-// Load data when page loads
-window.addEventListener('DOMContentLoaded', () => {
+// Load data when page loads — works whether script is static or dynamically injected
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => loadData('boys', 'bgdMX6MDKE'));
+} else {
     loadData('boys', 'bgdMX6MDKE');
-});
+}
