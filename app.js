@@ -373,6 +373,10 @@ function toggleCombinedAgeGroup(leagueId, el) {
     } else {
         // Add to existing selection
         selectedCombinedAgeGroups.add(leagueId);
+        // If all age groups are now selected, reset to "All" state
+        if (selectedCombinedAgeGroups.size === leaguesData.length) {
+            selectedCombinedAgeGroups = new Set();
+        }
     }
     updateCombinedAgeGroupButtons();
     renderCombinedLadder();
