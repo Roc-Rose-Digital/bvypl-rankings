@@ -1107,12 +1107,13 @@ function renderCombinedLadder() {
         // Girls league: no colors applied
         
         html += `
-            <tr class="${rowClass}">
+            <tr class="${rowClass} cursor-pointer hover:bg-blue-50"
+                onclick="navigateToTeam(this.dataset.club)" data-club="${escAttr(club.name)}">
                 <td class="px-4 py-3 font-semibold">${position}</td>
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
-                        <img src="${club.logo}" alt="${club.name}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                        <span class="font-medium">${club.name}</span>
+                        <img src="${club.logo}" alt="${escAttr(club.name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                        <span class="font-medium text-blue-700">${escHtml(club.name)}</span>
                     </div>
                 </td>
                 <td class="px-4 py-3 text-center">${club.totalPlayed}</td>
@@ -1186,13 +1187,15 @@ function renderAgeGroupLadders() {
         `;
         
         ladder.forEach((team, index) => {
+            const clubName = getClubName(team.name);
             laddersHtml += `
-                <tr class="ladder-row">
+                <tr class="ladder-row cursor-pointer hover:bg-blue-50"
+                    onclick="navigateToTeam(this.dataset.club)" data-club="${escAttr(clubName)}">
                     <td class="px-4 py-3 font-semibold">${index + 1}</td>
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-3">
-                            <img src="${team.logo}" alt="${team.name}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                            <span class="font-medium">${team.name}</span>
+                            <img src="${team.logo}" alt="${escAttr(team.name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                            <span class="font-medium text-blue-700">${escHtml(team.name)}</span>
                         </div>
                     </td>
                     <td class="px-4 py-3 text-center">${team.played}</td>
