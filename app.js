@@ -690,7 +690,7 @@ async function renderMatchDetail(id, type) {
     const homeEl = document.getElementById('match-panel-home');
     const awayEl = document.getElementById('match-panel-away');
 
-    if (summaryEl) summaryEl.innerHTML = centreResult ? renderMatchCentre(centreResult) : '<div class="text-center py-4 text-gray-400 text-sm">No data available.</div>';
+    if (summaryEl) summaryEl.innerHTML = (centreResult && centreResult.data) ? renderMatchCentre(centreResult.data) : '<div class="text-center py-4 text-gray-400 text-sm">No match centre data available.</div>';
     if (homeEl) homeEl.innerHTML = homeResult ? renderLineup(homeResult, attrs.home_team_name) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
     if (awayEl) awayEl.innerHTML = awayResult ? renderLineup(awayResult, attrs.away_team_name) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
 }
@@ -880,28 +880,10 @@ async function renderTeamDetail(clubName) {
             ${fixturesHtml}
         </div>` : ''}
 
-        <div id="team-api-data">
-            <div class="text-center py-4 text-gray-400 text-sm">Loading club profile...</div>
-        </div>`;
+    `;
 
     showDetailView(html);
 
-    // Fetch team profile from Dribl (best-effort)
-    const apiContainer = document.getElementById('team-api-data');
-    try {
-        const teamId = Object.entries(teamIdMap).find(([name]) => getClubName(name) === clubName)?.[1];
-        if (!teamId) throw new Error('no team id');
-
-        const url = `https://mc-api.dribl.com/api/teams/${teamId}?tenant=w8zdBWPmBX`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        const json = await response.json();
-
-        const sections = renderApiSection(json.data?.attributes || json.data || json, 'Club Profile', []);
-        if (apiContainer) apiContainer.innerHTML = sections || '';
-    } catch {
-        if (apiContainer) apiContainer.innerHTML = '';
-    }
 }
 
 // Populate combined ladder age group toggle buttons
