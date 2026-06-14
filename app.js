@@ -431,7 +431,7 @@ function renderApiSection(data, title, skipFields) {
                     value.map(item => renderApiSection(item, '', [])).join('') +
                     '</div>';
             } else {
-                displayValue = value.join(', ');
+                displayValue = value.map(v => escHtml(String(v))).join(', ');
             }
         } else if (typeof value === 'object') {
             displayValue = renderApiSection(value, '', []);
@@ -441,7 +441,7 @@ function renderApiSection(data, title, skipFields) {
 
         rows += `
             <div class="flex py-2 border-b border-gray-100 last:border-0">
-                <div class="w-40 flex-shrink-0 text-xs font-semibold text-gray-500 uppercase pt-0.5">${snakeToTitle(key)}</div>
+                <div class="w-40 flex-shrink-0 text-xs font-semibold text-gray-500 uppercase pt-0.5">${escHtml(snakeToTitle(key))}</div>
                 <div class="flex-1 text-sm text-gray-800">${displayValue}</div>
             </div>`;
     });
