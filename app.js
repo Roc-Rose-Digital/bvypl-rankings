@@ -355,6 +355,10 @@ function escAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function escHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function showDetailView(html) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelector('nav').classList.add('hidden');
@@ -432,7 +436,7 @@ function renderApiSection(data, title, skipFields) {
         } else if (typeof value === 'object') {
             displayValue = renderApiSection(value, '', []);
         } else {
-            displayValue = String(value);
+            displayValue = escHtml(String(value));
         }
 
         rows += `
@@ -446,7 +450,7 @@ function renderApiSection(data, title, skipFields) {
 
     return `
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            ${title ? `<h3 class="text-lg font-bold mb-4">${title}</h3>` : ''}
+            ${title ? `<h3 class="text-lg font-bold mb-4">${escHtml(title)}</h3>` : ''}
             <div>${rows}</div>
         </div>`;
 }
