@@ -454,7 +454,7 @@ function renderApiSection(data, title, skipFields) {
         }
 
         rows += `
-            <div class="flex py-2 border-b border-gray-100 last:border-0">
+            <div class="stripe-row flex py-2 border-b border-gray-100 last:border-0">
                 <div class="w-40 flex-shrink-0 text-xs font-semibold text-gray-500 uppercase pt-0.5">${escHtml(snakeToTitle(key))}</div>
                 <div class="flex-1 text-sm text-gray-800">${displayValue}</div>
             </div>`;
@@ -502,7 +502,7 @@ function renderMatchCentre(data) {
             <h3 class="text-lg font-semibold mb-3">Match Info</h3>
             <div>`;
         infoRows.forEach(([label, value]) => {
-            html += `<div class="flex py-2 border-b border-gray-100 last:border-0">
+            html += `<div class="stripe-row flex py-2 border-b border-gray-100 last:border-0">
                 <span class="w-40 text-xs font-semibold text-gray-500 uppercase pt-0.5">${escHtml(label)}</span>
                 <span class="text-sm text-gray-800">${escHtml(String(value))}</span>
             </div>`;
@@ -521,7 +521,7 @@ function renderMatchCentre(data) {
             const team = escHtml(isHome ? (a.home_team_name || '') : (a.away_team_name || ''));
             const color = escAttr(isHome ? (a.home_club_color || '#2563eb') : (a.away_club_color || '#6b7280'));
             const note = ev.own_goal ? ' (OG)' : ev.penalty_kick ? ' (Pen)' : '';
-            html += `<div class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+            html += `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
                 <span class="text-sm font-bold text-gray-400 w-8 text-right">${escHtml(String(ev.minute))}'</span>
                 <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${color}"></div>
                 <span class="flex-1 text-sm">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}${note ? ` <span class="text-gray-500 text-xs">${escHtml(note)}</span>` : ''}</span>
@@ -578,7 +578,7 @@ function renderLineup(players, teamName) {
             : '';
         const capHtml = p.is_captain ? '<span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-1">C</span>' : '';
 
-        return `<div class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+        return `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
             <img src="${escAttr(p.image || '')}" class="w-8 h-8 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">
             <span class="text-xs text-gray-400 w-8 flex-shrink-0 text-right">${p.jersey ? escHtml(String(p.jersey)) : ''}</span>
             <span class="flex-1 text-sm font-medium">${name}</span>
@@ -757,7 +757,7 @@ async function renderTeamDetail(clubName) {
         const dateStr = date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 
         return `
-            <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
+            <div class="stripe-row flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
                  onclick="navigateToMatch('${escAttr(r.hash_id)}', 'result')">
                 <span class="text-xs text-gray-400 w-16">${escHtml(dateStr)}</span>
                 <span class="text-xs font-semibold px-2 py-0.5 rounded ${outcomeColor} w-6 text-center">${outcome}</span>
@@ -787,7 +787,7 @@ async function renderTeamDetail(clubName) {
         const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
 
         return `
-            <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
+            <div class="stripe-row flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
                  onclick="navigateToMatch('${escAttr(f.hash_id)}', 'fixture')">
                 <span class="text-xs text-gray-400 w-32">${escHtml(dateStr)} ${escHtml(timeStr)}</span>
                 <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
@@ -1428,7 +1428,7 @@ function renderFixtures() {
             const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
             
             html += `
-                <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
+                <div class="stripe-row p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
                      onclick="navigateToMatch('${escAttr(fixture.hash_id)}', 'fixture')">
                     <div class="flex items-center gap-4">
                         <!-- Date and Time -->
@@ -1543,7 +1543,7 @@ function renderResults() {
             const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             
             html += `
-                <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
+                <div class="stripe-row p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
                      onclick="navigateToMatch('${escAttr(result.hash_id)}', 'result')">
                     <div class="flex items-center gap-4">
                         <!-- Date -->

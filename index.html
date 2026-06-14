@@ -11,8 +11,14 @@
             color: #2563eb;
             font-weight: 600;
         }
-        .ladder-row:nth-child(even) {
+        table tbody tr:nth-child(even):not(.promoted):not(.relegated) {
             background-color: #f9fafb;
+        }
+        .stripe-row:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        .stripe-row.cursor-pointer:hover {
+            background-color: #eff6ff !important;
         }
         .ladder-row:hover {
             background-color: #eff6ff !important;
