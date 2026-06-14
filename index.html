@@ -45,14 +45,14 @@
                         <h1 class="text-3xl font-bold">Victorian Youth Rankings</h1>
                         <p class="text-blue-100 mt-2">Junior Competition 2026</p>
                     </div>
-                    <div class="mt-4 md:mt-0 flex gap-3 items-end">
-                        <div>
+                    <div class="mt-4 md:mt-0 flex flex-wrap gap-3 items-end">
+                        <div class="flex-1 min-w-0">
                             <label class="block text-sm font-semibold mb-2">Division</label>
-                            <select id="division-selector" class="px-4 py-2 rounded bg-white text-gray-800 font-semibold border-2 border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 w-80">
+                            <select id="division-selector" class="px-4 py-2 rounded bg-white text-gray-800 font-semibold border-2 border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 w-full">
                                 <!-- Options will be populated by JavaScript based on gender -->
                             </select>
                         </div>
-                        <button id="refresh-button" onclick="refreshData()" class="px-4 py-2 rounded bg-white text-blue-600 font-semibold border-2 border-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors">
+                        <button id="refresh-button" onclick="refreshData()" class="px-4 py-2 rounded bg-white text-blue-600 font-semibold border-2 border-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors whitespace-nowrap">
                             <span id="refresh-icon">↻</span> Refresh Data
                         </button>
                     </div>
@@ -63,17 +63,17 @@
         <!-- Navigation Tabs -->
         <nav class="bg-white shadow-md sticky top-0 z-10">
             <div class="container mx-auto px-4">
-                <div class="flex space-x-8 overflow-x-auto">
-                    <button onclick="showTab('combined')" id="tab-combined" class="py-4 px-2 whitespace-nowrap tab-active">
+                <div class="flex overflow-x-auto">
+                    <button onclick="showTab('combined')" id="tab-combined" class="py-4 px-3 sm:px-4 whitespace-nowrap tab-active text-sm sm:text-base">
                         Combined Club Ladder
                     </button>
-                    <button onclick="showTab('ladders')" id="tab-ladders" class="py-4 px-2 whitespace-nowrap hover:text-blue-600">
+                    <button onclick="showTab('ladders')" id="tab-ladders" class="py-4 px-3 sm:px-4 whitespace-nowrap hover:text-blue-600 text-sm sm:text-base">
                         Age Group Ladders
                     </button>
-                    <button onclick="showTab('fixtures')" id="tab-fixtures" class="py-4 px-2 whitespace-nowrap hover:text-blue-600">
+                    <button onclick="showTab('fixtures')" id="tab-fixtures" class="py-4 px-3 sm:px-4 whitespace-nowrap hover:text-blue-600 text-sm sm:text-base">
                         Fixtures
                     </button>
-                    <button onclick="showTab('results')" id="tab-results" class="py-4 px-2 whitespace-nowrap hover:text-blue-600">
+                    <button onclick="showTab('results')" id="tab-results" class="py-4 px-3 sm:px-4 whitespace-nowrap hover:text-blue-600 text-sm sm:text-base">
                         Results
                     </button>
                 </div>

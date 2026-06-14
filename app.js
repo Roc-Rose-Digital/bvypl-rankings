@@ -689,11 +689,11 @@ function renderMatchCentre(data) {
                 const color = escAttr(isHome ? (a.home_club_color || '#2563eb') : (a.away_club_color || '#6b7280'));
                 const note = ev.own_goal ? ' (OG)' : ev.penalty_kick ? ' (Pen)' : '';
                 html += `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                    <span class="text-sm font-bold text-gray-400 w-8 text-right">${escHtml(String(ev.minute))}'</span>
+                    <span class="text-sm font-bold text-gray-400 w-8 text-right flex-shrink-0">${escHtml(String(ev.minute))}'</span>
                     <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${color}"></div>
-                    <span class="flex-1 text-sm">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}${note ? ` <span class="text-gray-500 text-xs">${escHtml(note)}</span>` : ''}</span>
-                    <span class="text-xs text-gray-500 w-32 text-right">${team}</span>
-                    <span class="text-sm font-bold tabular-nums w-10 text-right">${ev.home_score}–${ev.away_score}</span>
+                    <span class="flex-1 text-sm min-w-0 truncate">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}${note ? ` <span class="text-gray-500 text-xs">${escHtml(note)}</span>` : ''}</span>
+                    <span class="hidden sm:inline text-xs text-gray-500 w-28 text-right flex-shrink-0">${team}</span>
+                    <span class="text-sm font-bold tabular-nums w-10 text-right flex-shrink-0">${ev.home_score}–${ev.away_score}</span>
                 </div>`;
                 prevHome = ev.home_score;
             } else {
@@ -706,11 +706,11 @@ function renderMatchCentre(data) {
                 const isHome = ev.team_hash_id === a.home_team_hash_id;
                 const team = escHtml(isHome ? (a.home_team_name || '') : (a.away_team_name || ''));
                 html += `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                    <span class="text-sm font-bold text-gray-400 w-8 text-right">${escHtml(String(ev.minute))}'</span>
-                    <div class="flex gap-0.5">${cardIcon}</div>
-                    <span class="flex-1 text-sm">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}</span>
-                    <span class="text-xs text-gray-500 w-32 text-right">${team}</span>
-                    <span class="w-10"></span>
+                    <span class="text-sm font-bold text-gray-400 w-8 text-right flex-shrink-0">${escHtml(String(ev.minute))}'</span>
+                    <div class="flex gap-0.5 flex-shrink-0">${cardIcon}</div>
+                    <span class="flex-1 text-sm min-w-0 truncate">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}</span>
+                    <span class="hidden sm:inline text-xs text-gray-500 w-28 text-right flex-shrink-0">${team}</span>
+                    <span class="w-10 flex-shrink-0"></span>
                 </div>`;
             }
         });
@@ -806,51 +806,51 @@ async function renderMatchDetail(id, type) {
     const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
 
     const scoreHtml = isResult
-        ? `<div class="flex items-center justify-center gap-4 text-4xl font-bold my-4">
+        ? `<div class="flex items-center justify-center gap-2 sm:gap-4 text-2xl sm:text-4xl font-bold my-2 sm:my-4">
                <span class="${attrs.home_score > attrs.away_score ? 'text-green-600' : 'text-gray-700'}">${attrs.home_score}</span>
                <span class="text-gray-400">-</span>
                <span class="${attrs.away_score > attrs.home_score ? 'text-green-600' : 'text-gray-700'}">${attrs.away_score}</span>
            </div>`
-        : `<div class="text-center text-2xl font-bold text-gray-400 my-4">vs</div>`;
+        : `<div class="text-center text-lg sm:text-2xl font-bold text-gray-400 my-2 sm:my-4">vs</div>`;
 
     const headerHtml = `
         <button onclick="history.back()" class="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold">
             ← Back
         </button>
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-3 flex-1 justify-end text-right">
-                    <div>
-                        <div class="font-bold text-lg cursor-pointer hover:text-blue-600"
+        <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+            <div class="flex items-center justify-between gap-2 sm:gap-4">
+                <div class="flex items-center gap-2 sm:gap-3 flex-1 justify-end text-right min-w-0">
+                    <div class="min-w-0">
+                        <div class="font-bold text-sm sm:text-lg cursor-pointer hover:text-blue-600 leading-tight"
                              onclick="navigateToTeam(this.dataset.club)" data-club="${escAttr(getClubName(attrs.home_team_name))}">
                             ${escHtml(attrs.home_team_name)}
                         </div>
                     </div>
-                    <img src="${escAttr(attrs.home_logo)}" alt="${escAttr(attrs.home_team_name)}" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
+                    <img src="${escAttr(attrs.home_logo)}" alt="${escAttr(attrs.home_team_name)}" class="w-10 h-10 sm:w-12 sm:h-12 object-contain flex-shrink-0" onerror="this.style.display='none'">
                 </div>
-                <div class="text-center min-w-24">
+                <div class="text-center flex-shrink-0">
                     ${scoreHtml}
                 </div>
-                <div class="flex items-center gap-3 flex-1 justify-start">
-                    <img src="${escAttr(attrs.away_logo)}" alt="${escAttr(attrs.away_team_name)}" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
-                    <div>
-                        <div class="font-bold text-lg cursor-pointer hover:text-blue-600"
+                <div class="flex items-center gap-2 sm:gap-3 flex-1 justify-start min-w-0">
+                    <img src="${escAttr(attrs.away_logo)}" alt="${escAttr(attrs.away_team_name)}" class="w-10 h-10 sm:w-12 sm:h-12 object-contain flex-shrink-0" onerror="this.style.display='none'">
+                    <div class="min-w-0">
+                        <div class="font-bold text-sm sm:text-lg cursor-pointer hover:text-blue-600 leading-tight"
                              onclick="navigateToTeam(this.dataset.club)" data-club="${escAttr(getClubName(attrs.away_team_name))}">
                             ${escHtml(attrs.away_team_name)}
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="text-center text-sm text-gray-500 mt-4 space-y-1">
+            <div class="text-center text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4 space-y-1">
                 <div>${escHtml(dateStr)} at ${escHtml(timeStr)}</div>
                 <div>${escHtml(attrs.league_name)} · ${escHtml(attrs.full_round || attrs.round)}</div>
                 <div>${escHtml(attrs.ground_name)}${attrs.field_name ? ' · ' + escHtml(attrs.field_name) : ''}</div>
             </div>
         </div>
-        <div class="flex gap-2 mb-4 flex-wrap">
-            <button onclick="showMatchTab('summary')" id="match-tab-summary" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Summary</button>
-            <button onclick="showMatchTab('home')" id="match-tab-home" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-blue-700 hover:text-white text-sm">${escHtml(getClubName(attrs.home_team_name))}</button>
-            <button onclick="showMatchTab('away')" id="match-tab-away" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-blue-700 hover:text-white text-sm">${escHtml(getClubName(attrs.away_team_name))}</button>
+        <div class="flex gap-2 mb-4">
+            <button onclick="showMatchTab('summary')" id="match-tab-summary" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Summary</button>
+            <button onclick="showMatchTab('home')" id="match-tab-home" class="flex-1 px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-blue-700 hover:text-white text-sm truncate">${escHtml(getClubName(attrs.home_team_name))}</button>
+            <button onclick="showMatchTab('away')" id="match-tab-away" class="flex-1 px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-blue-700 hover:text-white text-sm truncate">${escHtml(getClubName(attrs.away_team_name))}</button>
         </div>
         <div id="match-panel-summary"><div class="text-center py-4 text-gray-400 text-sm">Loading...</div></div>
         <div id="match-panel-home" class="hidden"><div class="text-center py-4 text-gray-400 text-sm">Loading...</div></div>
@@ -1091,16 +1091,16 @@ async function populateTeamBreakdown(clubName) {
         const outcomeColor = outcome === 'W' ? 'bg-green-100 text-green-700' : outcome === 'L' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600';
         const dateStr = new Date(attrs.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
         return `
-            <div class="team-row-results flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
+            <div class="team-row-results flex items-center gap-2 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
                  data-league="${escAttr(attrs.league_name)}"
                  data-id="${escAttr(r.hash_id)}"
                  onclick="navigateToMatch(this.dataset.id, 'result')">
-                <span class="text-xs text-gray-400 w-16">${escHtml(dateStr)}</span>
-                <span class="text-xs font-semibold px-2 py-0.5 rounded ${outcomeColor} w-6 text-center">${outcome}</span>
-                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
-                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
-                <span class="text-sm font-bold">${clubScore}–${oppScore}</span>
-                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
+                <span class="text-xs text-gray-400 w-14 flex-shrink-0">${escHtml(dateStr)}</span>
+                <span class="text-xs font-semibold px-1.5 py-0.5 rounded ${outcomeColor} flex-shrink-0 text-center w-6">${outcome}</span>
+                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain flex-shrink-0" onerror="this.style.display='none'">
+                <span class="flex-1 text-sm min-w-0 truncate">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
+                <span class="text-sm font-bold flex-shrink-0">${clubScore}–${oppScore}</span>
+                <span class="hidden sm:inline text-xs text-gray-400 flex-shrink-0">${escHtml(attrs.league_name)}</span>
             </div>`;
     }).join('');
 
@@ -1142,15 +1142,15 @@ async function populateTeamBreakdown(clubName) {
         const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
         const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
         return `
-            <div class="team-row-fixtures flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
+            <div class="team-row-fixtures flex items-center gap-2 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
                  data-league="${escAttr(attrs.league_name)}"
                  data-id="${escAttr(f.hash_id)}"
                  onclick="navigateToMatch(this.dataset.id, 'fixture')">
-                <span class="text-xs text-gray-400 w-32">${escHtml(dateStr)} ${escHtml(timeStr)}</span>
-                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
-                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
-                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
-                <span class="text-xs text-gray-400">${escHtml(attrs.full_round || attrs.round)}</span>
+                <span class="text-xs text-gray-400 w-20 sm:w-28 flex-shrink-0">${escHtml(dateStr)}<br>${escHtml(timeStr)}</span>
+                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain flex-shrink-0" onerror="this.style.display='none'">
+                <span class="flex-1 text-sm min-w-0 truncate">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
+                <span class="hidden sm:inline text-xs text-gray-400 flex-shrink-0">${escHtml(attrs.league_name)}</span>
+                <span class="text-xs text-gray-400 flex-shrink-0">${escHtml(attrs.full_round || attrs.round)}</span>
             </div>`;
     }).join('');
 
@@ -1678,44 +1678,44 @@ function renderFixtures() {
             const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
             
             html += `
-                <div class="stripe-row p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
+                <div class="stripe-row p-3 sm:p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
                      onclick="navigateToMatch('${escAttr(fixture.hash_id)}', 'fixture')">
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 sm:gap-4">
                         <!-- Date and Time -->
-                        <div class="text-sm text-gray-600 w-32">
+                        <div class="text-xs sm:text-sm text-gray-600 w-20 sm:w-32 flex-shrink-0">
                             <div class="font-medium">${escHtml(dateStr)}</div>
                             <div>${escHtml(timeStr)}</div>
                         </div>
 
                         <!-- Teams and Info -->
-                        <div class="flex-1">
-                            <div class="flex items-center justify-center gap-4 mb-2">
-                                <div class="flex items-center gap-2 flex-1 justify-end">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-center gap-2 sm:gap-4 mb-1 sm:mb-2">
+                                <div class="flex items-center gap-1 sm:gap-2 flex-1 justify-end min-w-0">
                                     ${attrs.home_team_name
-                                        ? `<span class="font-semibold text-right text-blue-700 hover:underline"
+                                        ? `<span class="font-semibold text-right text-blue-700 hover:underline text-xs sm:text-base truncate"
                                               onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>`
                                         : `<span class="text-gray-400 text-sm">Bye</span>`}
-                                    <img src="${escAttr(attrs.home_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    <img src="${escAttr(attrs.home_logo || '')}" class="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" onerror="this.style.display='none'">
                                 </div>
-                                <span class="text-gray-400 font-bold px-2">-</span>
-                                <div class="flex items-center gap-2 flex-1">
-                                    <img src="${escAttr(attrs.away_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                <span class="text-gray-400 font-bold px-1">-</span>
+                                <div class="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                                    <img src="${escAttr(attrs.away_logo || '')}" class="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" onerror="this.style.display='none'">
                                     ${attrs.away_team_name
-                                        ? `<span class="font-semibold text-blue-700 hover:underline"
+                                        ? `<span class="font-semibold text-blue-700 hover:underline text-xs sm:text-base truncate"
                                               onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>`
                                         : `<span class="text-gray-400 text-sm">Bye</span>`}
                                 </div>
                             </div>
-                            <div class="text-center text-xs text-gray-600 flex items-center justify-center gap-2">
-                                <span>${escHtml(attrs.league_name)}</span>
-                                <span class="text-gray-400">•</span>
-                                <span class="text-gray-500">${escHtml(attrs.ground_name)}</span>
-                                ${attrs.field_name ? `<span class="text-gray-400">•</span><span class="text-gray-500">${escHtml(attrs.field_name)}</span>` : ''}
+                            <div class="text-center text-xs text-gray-500 flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+                                <span class="hidden sm:inline">${escHtml(attrs.league_name)}</span>
+                                <span class="hidden sm:inline text-gray-300">•</span>
+                                <span>${escHtml(attrs.ground_name)}</span>
+                                ${attrs.field_name ? `<span class="text-gray-300">•</span><span>${escHtml(attrs.field_name)}</span>` : ''}
                             </div>
                         </div>
 
                         <!-- Round -->
-                        <div class="text-sm text-right w-24">
+                        <div class="hidden sm:block text-sm text-right w-16 flex-shrink-0">
                             <div class="font-medium">${escHtml(attrs.round)}</div>
                         </div>
                     </div>
@@ -1797,46 +1797,46 @@ function renderResults() {
             const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             
             html += `
-                <div class="stripe-row p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
+                <div class="stripe-row p-3 sm:p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
                      onclick="navigateToMatch('${escAttr(result.hash_id)}', 'result')">
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 sm:gap-4">
                         <!-- Date -->
-                        <div class="text-sm text-gray-600 w-32">
+                        <div class="text-xs sm:text-sm text-gray-600 w-16 sm:w-28 flex-shrink-0">
                             <div class="font-medium">${escHtml(dateStr)}</div>
                         </div>
 
                         <!-- Teams with Scores and Info -->
-                        <div class="flex-1">
-                            <div class="flex items-center justify-center gap-4 mb-2">
-                                <div class="flex items-center gap-2 flex-1 justify-end">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-center gap-2 sm:gap-4 mb-1 sm:mb-2">
+                                <div class="flex items-center gap-1 sm:gap-2 flex-1 justify-end min-w-0">
                                     ${attrs.home_team_name
-                                        ? `<span class="font-semibold text-right text-blue-700 hover:underline"
+                                        ? `<span class="font-semibold text-right text-blue-700 hover:underline text-xs sm:text-base truncate"
                                               onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>`
                                         : `<span class="text-gray-400 text-sm">Bye</span>`}
-                                    <img src="${escAttr(attrs.home_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    <img src="${escAttr(attrs.home_logo || '')}" class="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" onerror="this.style.display='none'">
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xl font-bold ${attrs.home_score > attrs.away_score ? 'text-green-600' : 'text-gray-600'}">${attrs.home_score}</span>
+                                <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                                    <span class="text-base sm:text-xl font-bold ${attrs.home_score > attrs.away_score ? 'text-green-600' : 'text-gray-600'}">${attrs.home_score}</span>
                                     <span class="text-gray-400 font-bold">-</span>
-                                    <span class="text-xl font-bold ${attrs.away_score > attrs.home_score ? 'text-green-600' : 'text-gray-600'}">${attrs.away_score}</span>
+                                    <span class="text-base sm:text-xl font-bold ${attrs.away_score > attrs.home_score ? 'text-green-600' : 'text-gray-600'}">${attrs.away_score}</span>
                                 </div>
-                                <div class="flex items-center gap-2 flex-1">
-                                    <img src="${escAttr(attrs.away_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                <div class="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                                    <img src="${escAttr(attrs.away_logo || '')}" class="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" onerror="this.style.display='none'">
                                     ${attrs.away_team_name
-                                        ? `<span class="font-semibold text-blue-700 hover:underline"
+                                        ? `<span class="font-semibold text-blue-700 hover:underline text-xs sm:text-base truncate"
                                               onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>`
                                         : `<span class="text-gray-400 text-sm">Bye</span>`}
                                 </div>
                             </div>
-                            <div class="text-center text-xs text-gray-600 flex items-center justify-center gap-2">
-                                <span>${escHtml(attrs.league_name)}</span>
-                                <span class="text-gray-400">•</span>
-                                <span class="text-gray-500">${escHtml(attrs.ground_name)}</span>
+                            <div class="text-center text-xs text-gray-500 flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+                                <span class="hidden sm:inline">${escHtml(attrs.league_name)}</span>
+                                <span class="hidden sm:inline text-gray-300">•</span>
+                                <span>${escHtml(attrs.ground_name)}</span>
                             </div>
                         </div>
 
                         <!-- Round -->
-                        <div class="text-sm text-right w-24">
+                        <div class="hidden sm:block text-sm text-right w-16 flex-shrink-0">
                             <div class="font-medium">${escHtml(attrs.round)}</div>
                         </div>
                     </div>
