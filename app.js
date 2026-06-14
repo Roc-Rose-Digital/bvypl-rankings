@@ -455,6 +455,71 @@ function renderApiSection(data, title, skipFields) {
         </div>`;
 }
 
+function renderMatchCentre(data) {
+    if (!data || !data.attributes) return '';
+    const a = data.attributes;
+    let html = '';
+
+    // Venue
+    if (a.ground_name) {
+        const mapUrl = a.ground_latitude && a.ground_longitude
+            ? `https://maps.google.com/?q=${encodeURIComponent(a.ground_latitude + ',' + a.ground_longitude)}`
+            : null;
+        html += `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
+            <h3 class="text-lg font-semibold mb-2">Venue</h3>
+            ${mapUrl
+                ? `<a href="${escAttr(mapUrl)}" target="_blank" rel="noopener" class="text-sm font-medium text-blue-700 hover:underline">${escHtml(a.ground_name)}</a>`
+                : `<div class="text-sm font-medium">${escHtml(a.ground_name)}</div>`
+            }
+            ${a.ground_address ? `<div class="text-xs text-gray-500 mt-1">${escHtml(a.ground_address)}</div>` : ''}
+        </div>`;
+    }
+
+    // Goals timeline
+    const goals = (a.match_events || []).filter(ev => ev.type === 'goal');
+    if (goals.length) {
+        html += `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
+            <h3 class="text-lg font-semibold mb-4">Goals</h3><div>`;
+        let prevHome = 0;
+        goals.forEach(ev => {
+            const isHome = ev.home_score > prevHome;
+            const team = escHtml(isHome ? (a.home_team_name || '') : (a.away_team_name || ''));
+            const color = escAttr(isHome ? (a.home_club_color || '#2563eb') : (a.away_club_color || '#6b7280'));
+            const note = ev.own_goal ? ' (OG)' : ev.penalty_kick ? ' (Pen)' : '';
+            html += `<div class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                <span class="text-sm font-bold text-gray-400 w-8 text-right">${escHtml(String(ev.minute))}'</span>
+                <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${color}"></div>
+                <span class="flex-1 text-sm">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}${note ? ` <span class="text-gray-500 text-xs">${escHtml(note)}</span>` : ''}</span>
+                <span class="text-xs text-gray-500 w-32 text-right">${team}</span>
+                <span class="text-sm font-bold tabular-nums w-10 text-right">${ev.home_score}–${ev.away_score}</span>
+            </div>`;
+            prevHome = ev.home_score;
+        });
+        html += `</div></div>`;
+    }
+
+    // Officials
+    const refs = a.referees || [];
+    if (refs.length) {
+        const roleMap = { cr: 'Centre Referee', ar1: 'Assistant Referee 1', ar2: 'Assistant Referee 2', '4th': 'Fourth Official', gl: 'Game Leader' };
+        html += `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
+            <h3 class="text-lg font-semibold mb-4">Officials</h3>
+            <div class="space-y-3">`;
+        refs.forEach(ref => {
+            html += `<div class="flex items-center gap-3">
+                <img src="${escAttr(ref.image || '')}" class="w-10 h-10 rounded-full object-cover bg-gray-100" onerror="this.style.display='none'">
+                <div>
+                    <div class="text-sm font-medium">${escHtml(ref.name || '')}</div>
+                    <div class="text-xs text-gray-500">${escHtml(roleMap[ref.role] || ref.role || '')}</div>
+                </div>
+            </div>`;
+        });
+        html += `</div></div>`;
+    }
+
+    return html;
+}
+
 async function renderMatchDetail(id, type) {
     const dataSet = type === 'result' ? resultsData : fixturesData;
     const match = dataSet.find(m => m.hash_id === id);
@@ -536,7 +601,7 @@ async function renderMatchDetail(id, type) {
     ]);
 
     let sections = '';
-    if (centreResult) sections += renderApiSection(centreResult, 'Match Centre', []);
+    if (centreResult) sections += renderMatchCentre(centreResult);
     if (homeResult) sections += renderApiSection(homeResult, attrs.home_team_name + ' Lineup', []);
     if (awayResult) sections += renderApiSection(awayResult, attrs.away_team_name + ' Lineup', []);
 
