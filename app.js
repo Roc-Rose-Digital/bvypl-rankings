@@ -457,7 +457,7 @@ function renderApiSection(data, title, skipFields) {
 
 async function renderMatchDetail(id, type) {
     const dataSet = type === 'result' ? resultsData : fixturesData;
-    const match = dataSet.find(m => m.id === id);
+    const match = dataSet[parseInt(id)];
 
     if (!match) {
         showDetailView(`
@@ -523,7 +523,8 @@ async function renderMatchDetail(id, type) {
     showDetailView(headerHtml);
 
     const endpoint = type === 'result' ? 'results' : 'fixtures';
-    const url = `https://mc-api.dribl.com/api/${endpoint}/${id}?tenant=w8zdBWPmBX&timezone=Australia%2FSydney`;
+    const matchId = match.attributes.id || match.attributes.result_id || match.attributes.fixture_id;
+    const url = `https://mc-api.dribl.com/api/${endpoint}/${matchId}?tenant=w8zdBWPmBX&timezone=Australia%2FSydney`;
 
     try {
         const response = await fetch(url);
@@ -618,7 +619,7 @@ async function renderTeamDetail(clubName) {
 
         return `
             <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
-                 onclick="navigateToMatch('${escAttr(r.id)}', 'result')">
+                 onclick="navigateToMatch('${resultsData.indexOf(r)}', 'result')">
                 <span class="text-xs text-gray-400 w-16">${escHtml(dateStr)}</span>
                 <span class="text-xs font-semibold px-2 py-0.5 rounded ${outcomeColor} w-6 text-center">${outcome}</span>
                 <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
@@ -648,7 +649,7 @@ async function renderTeamDetail(clubName) {
 
         return `
             <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
-                 onclick="navigateToMatch('${escAttr(f.id)}', 'fixture')">
+                 onclick="navigateToMatch('${fixturesData.indexOf(f)}', 'fixture')">
                 <span class="text-xs text-gray-400 w-32">${escHtml(dateStr)} ${escHtml(timeStr)}</span>
                 <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
                 <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
@@ -1307,7 +1308,7 @@ function renderFixtures() {
             
             html += `
                 <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
-                     onclick="navigateToMatch('${escAttr(fixture.id)}', 'fixture')">
+                     onclick="navigateToMatch('${fixturesData.indexOf(fixture)}', 'fixture')">
                     <div class="flex items-center gap-4">
                         <!-- Date and Time -->
                         <div class="text-sm text-gray-600 w-32">
@@ -1422,7 +1423,7 @@ function renderResults() {
             
             html += `
                 <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
-                     onclick="navigateToMatch('${escAttr(result.id)}', 'result')">
+                     onclick="navigateToMatch('${resultsData.indexOf(result)}', 'result')">
                     <div class="flex items-center gap-4">
                         <!-- Date -->
                         <div class="text-sm text-gray-600 w-32">
