@@ -231,10 +231,16 @@ function initializeApp() {
     
     // Show combined ladder by default
     showTab('combined');
+
+    // Handle deep-linked detail URL on page load
+    if (window.location.hash) {
+        handleHashChange();
+    }
 }
 
 // Tab switching
 function showTab(tabName) {
+    lastActiveTab = tabName;
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.add('hidden');
@@ -344,6 +350,59 @@ let selectedCombinedAgeGroups = new Set(); // empty = all selected
 let teamIdMap = {};    // fullTeamName → teamId
 let clubLogoMap = {};  // clubName (suffix-stripped) → logoUrl
 let lastActiveTab = 'combined'; // restored when detail view is dismissed
+
+function escAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function showDetailView(html) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelector('nav').classList.add('hidden');
+    const detail = document.getElementById('detail-view');
+    detail.innerHTML = html;
+    detail.classList.remove('hidden');
+    window.scrollTo(0, 0);
+}
+
+function hideDetailView() {
+    const detail = document.getElementById('detail-view');
+    detail.classList.add('hidden');
+    detail.innerHTML = '';
+    document.querySelector('nav').classList.remove('hidden');
+    showTab(lastActiveTab);
+}
+
+function navigateToMatch(id, type) {
+    window.location.hash = 'match/' + type + '/' + id;
+}
+
+function navigateToTeam(clubName) {
+    window.location.hash = 'team/' + encodeURIComponent(clubName);
+}
+
+function handleHashChange() {
+    const hash = window.location.hash.replace('#', '');
+
+    if (!hash || hash === '') {
+        hideDetailView();
+        return;
+    }
+
+    const matchDetail = hash.match(/^match\/(result|fixture)\/(.+)$/);
+    if (matchDetail) {
+        renderMatchDetail(matchDetail[2], matchDetail[1]);
+        return;
+    }
+
+    const teamDetail = hash.match(/^team\/(.+)$/);
+    if (teamDetail) {
+        renderTeamDetail(decodeURIComponent(teamDetail[1]));
+        return;
+    }
+
+    // Unknown hash — clear detail view
+    hideDetailView();
+}
 
 // Populate combined ladder age group toggle buttons
 function populateCombinedLadderFilters() {
@@ -1052,3 +1111,5 @@ if (document.readyState === 'loading') {
 } else {
     loadData('boys', 'bgdMX6MDKE');
 }
+
+window.addEventListener('hashchange', handleHashChange);
