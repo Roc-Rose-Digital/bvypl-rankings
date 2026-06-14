@@ -520,6 +520,53 @@ function renderMatchCentre(data) {
     return html;
 }
 
+function renderLineup(players, teamName) {
+    if (!Array.isArray(players) || !players.length) return '';
+
+    const starters = players.filter(p => p.starting).sort((a, b) => (parseInt(a.jersey) || 99) - (parseInt(b.jersey) || 99));
+    const bench = players.filter(p => !p.starting && p.available).sort((a, b) => (parseInt(a.jersey) || 99) - (parseInt(b.jersey) || 99));
+
+    if (!starters.length && !bench.length) return '';
+
+    const renderPlayer = (p) => {
+        const name = escHtml(`${p.first_name} ${p.last_name}`);
+        const pos = p.is_goalkeeper ? 'GK' : (p.field_role || '');
+        const cardHtml = p.has_cards
+            ? (p.cards || []).map(c =>
+                (c.type || c.card_type) === 'yellow'
+                    ? '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>'
+                    : '<span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>'
+              ).join('')
+            : '';
+        const goalHtml = p.has_goals && p.goals && p.goals.length
+            ? `<span class="text-xs text-gray-500">${p.goals.length > 1 ? p.goals.length + 'G' : 'G'}</span>`
+            : '';
+        const capHtml = p.is_captain ? '<span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-1">C</span>' : '';
+
+        return `<div class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+            <img src="${escAttr(p.image || '')}" class="w-8 h-8 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">
+            <span class="text-xs text-gray-400 w-8 flex-shrink-0 text-right">${p.jersey ? escHtml(String(p.jersey)) : ''}</span>
+            <span class="flex-1 text-sm font-medium">${name}</span>
+            ${pos ? `<span class="text-xs text-gray-400">${escHtml(pos)}</span>` : ''}
+            <div class="flex items-center gap-1">${capHtml}${goalHtml}${cardHtml}</div>
+        </div>`;
+    };
+
+    let html = `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
+        <h3 class="text-lg font-semibold mb-4">${escHtml(teamName)}</h3>`;
+
+    if (starters.length) {
+        html += `<div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Starting XI</div>
+            <div class="mb-4">${starters.map(renderPlayer).join('')}</div>`;
+    }
+    if (bench.length) {
+        html += `<div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Bench</div>
+            <div>${bench.map(renderPlayer).join('')}</div>`;
+    }
+
+    return html + '</div>';
+}
+
 async function renderMatchDetail(id, type) {
     const dataSet = type === 'result' ? resultsData : fixturesData;
     const match = dataSet.find(m => m.hash_id === id);
@@ -602,8 +649,8 @@ async function renderMatchDetail(id, type) {
 
     let sections = '';
     if (centreResult) sections += renderMatchCentre(centreResult);
-    if (homeResult) sections += renderApiSection(homeResult, attrs.home_team_name + ' Lineup', []);
-    if (awayResult) sections += renderApiSection(awayResult, attrs.away_team_name + ' Lineup', []);
+    if (homeResult) sections += renderLineup(homeResult, attrs.home_team_name);
+    if (awayResult) sections += renderLineup(awayResult, attrs.away_team_name);
 
     const apiContainer = document.getElementById('match-api-data');
     if (apiContainer) apiContainer.innerHTML = sections || '';
