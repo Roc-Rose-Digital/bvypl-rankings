@@ -555,6 +555,215 @@ async function renderMatchDetail(id, type) {
     }
 }
 
+async function renderTeamDetail(clubName) {
+    const logo = clubLogoMap[clubName] || '';
+    const divisionName = divisions[currentGender][currentDivision]
+        ? divisions[currentGender][currentDivision].fullName
+        : '';
+
+    // Season summary (aggregate all age groups)
+    const stats = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0 };
+    const ageGroupRows = [];
+
+    leaguesData.forEach(league => {
+        const ladder = calculateLadder(league.name);
+        const team = ladder.find(t => getClubName(t.name) === clubName);
+        if (team) {
+            stats.played += team.played;
+            stats.won += team.won;
+            stats.drawn += team.drawn;
+            stats.lost += team.lost;
+            stats.gf += team.goalsFor;
+            stats.ga += team.goalsAgainst;
+            stats.gd += team.goalDifference;
+            stats.pts += team.points;
+            const pos = ladder.indexOf(team) + 1;
+            ageGroupRows.push(`
+                <tr class="border-b border-gray-100 last:border-0">
+                    <td class="py-2 pr-4 font-medium text-sm">${escHtml(league.name)}</td>
+                    <td class="py-2 px-4 text-center text-sm">${pos}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.played}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.won}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.drawn}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.lost}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.goalsFor}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.goalsAgainst}</td>
+                    <td class="py-2 px-4 text-center text-sm font-semibold ${team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
+                    <td class="py-2 px-4 text-center text-sm font-bold text-blue-600">${team.points}</td>
+                </tr>`);
+        }
+    });
+
+    // Recent results (last 10, newest first)
+    const clubResults = resultsData
+        .filter(r => {
+            const attrs = r.attributes;
+            return attrs.status === 'complete' &&
+                (getClubName(attrs.home_team_name) === clubName || getClubName(attrs.away_team_name) === clubName);
+        })
+        .sort((a, b) => new Date(b.attributes.date) - new Date(a.attributes.date))
+        .slice(0, 10);
+
+    const recentResultsHtml = clubResults.map(r => {
+        const attrs = r.attributes;
+        const isHome = getClubName(attrs.home_team_name) === clubName;
+        const opponent = isHome ? attrs.away_team_name : attrs.home_team_name;
+        const opponentLogo = isHome ? attrs.away_logo : attrs.home_logo;
+        const clubScore = isHome ? attrs.home_score : attrs.away_score;
+        const oppScore = isHome ? attrs.away_score : attrs.home_score;
+        const outcome = clubScore > oppScore ? 'W' : clubScore < oppScore ? 'L' : 'D';
+        const outcomeColor = outcome === 'W' ? 'bg-green-100 text-green-700' : outcome === 'L' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600';
+        const date = new Date(attrs.date);
+        const dateStr = date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+
+        return `
+            <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
+                 onclick="navigateToMatch('${escAttr(r.id)}', 'result')">
+                <span class="text-xs text-gray-400 w-16">${escHtml(dateStr)}</span>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded ${outcomeColor} w-6 text-center">${outcome}</span>
+                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
+                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
+                <span class="text-sm font-bold">${clubScore}–${oppScore}</span>
+                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
+            </div>`;
+    }).join('');
+
+    // Upcoming fixtures
+    const clubFixtures = fixturesData
+        .filter(f => {
+            const attrs = f.attributes;
+            return attrs.status === 'pending' &&
+                (getClubName(attrs.home_team_name) === clubName || getClubName(attrs.away_team_name) === clubName);
+        })
+        .sort((a, b) => new Date(a.attributes.date) - new Date(b.attributes.date));
+
+    const fixturesHtml = clubFixtures.map(f => {
+        const attrs = f.attributes;
+        const isHome = getClubName(attrs.home_team_name) === clubName;
+        const opponent = isHome ? attrs.away_team_name : attrs.home_team_name;
+        const opponentLogo = isHome ? attrs.away_logo : attrs.home_logo;
+        const date = new Date(attrs.date);
+        const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+        const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+        return `
+            <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
+                 onclick="navigateToMatch('${escAttr(f.id)}', 'fixture')">
+                <span class="text-xs text-gray-400 w-32">${escHtml(dateStr)} ${escHtml(timeStr)}</span>
+                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
+                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
+                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
+                <span class="text-xs text-gray-400">${escHtml(attrs.full_round || attrs.round)}</span>
+            </div>`;
+    }).join('');
+
+    const html = `
+        <button onclick="history.back()" class="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold">
+            ← Back
+        </button>
+
+        <div class="bg-blue-600 text-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex items-center gap-4">
+                ${logo ? `<img src="${escAttr(logo)}" alt="${escAttr(clubName)}" class="w-16 h-16 object-contain bg-white rounded p-1">` : ''}
+                <div>
+                    <h2 class="text-2xl font-bold">${escHtml(clubName)}</h2>
+                    <p class="text-blue-100">${escHtml(divisionName)} · 2026</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-bold mb-4">Season Summary</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-center">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">P</th>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">W</th>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">D</th>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">L</th>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GF</th>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GA</th>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GD</th>
+                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="px-3 py-3">${stats.played}</td>
+                            <td class="px-3 py-3">${stats.won}</td>
+                            <td class="px-3 py-3">${stats.drawn}</td>
+                            <td class="px-3 py-3">${stats.lost}</td>
+                            <td class="px-3 py-3">${stats.gf}</td>
+                            <td class="px-3 py-3">${stats.ga}</td>
+                            <td class="px-3 py-3 font-semibold ${stats.gd >= 0 ? 'text-green-600' : 'text-red-600'}">${stats.gd > 0 ? '+' : ''}${stats.gd}</td>
+                            <td class="px-3 py-3 font-bold text-blue-600">${stats.pts}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        ${ageGroupRows.length ? `
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-bold mb-4">Age Group Breakdown</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="py-2 pr-4 text-left text-xs font-semibold text-gray-500 uppercase">Age Group</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pos</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">P</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">W</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">D</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">L</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GF</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GA</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GD</th>
+                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>${ageGroupRows.join('')}</tbody>
+                </table>
+            </div>
+        </div>` : ''}
+
+        ${recentResultsHtml ? `
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-bold mb-4">Recent Results</h3>
+            ${recentResultsHtml}
+        </div>` : ''}
+
+        ${fixturesHtml ? `
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-bold mb-4">Upcoming Fixtures</h3>
+            ${fixturesHtml}
+        </div>` : ''}
+
+        <div id="team-api-data">
+            <div class="text-center py-4 text-gray-400 text-sm">Loading club profile...</div>
+        </div>`;
+
+    showDetailView(html);
+
+    // Fetch team profile from Dribl (best-effort)
+    const apiContainer = document.getElementById('team-api-data');
+    try {
+        const teamId = Object.entries(teamIdMap).find(([name]) => getClubName(name) === clubName)?.[1];
+        if (!teamId) throw new Error('no team id');
+
+        const url = `https://mc-api.dribl.com/api/teams/${teamId}?tenant=w8zdBWPmBX`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const json = await response.json();
+
+        const sections = renderApiSection(json.data?.attributes || json.data || json, 'Club Profile', []);
+        if (apiContainer) apiContainer.innerHTML = sections || '';
+    } catch {
+        if (apiContainer) apiContainer.innerHTML = '';
+    }
+}
+
 // Populate combined ladder age group toggle buttons
 function populateCombinedLadderFilters() {
     selectedCombinedAgeGroups = new Set(); // reset to "all" on data reload
