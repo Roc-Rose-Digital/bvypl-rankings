@@ -3,35 +3,80 @@ let leaguesData = [];
 let fixturesData = [];
 let resultsData = [];
 let roundsData = [];
-let currentGender = 'boys'; // Default to boys
-let currentDivision = 'bgdMX6MDKE'; // Default to YPL1
+let currentGender = 'boys'; // kept for compatibility but unused
+let currentDivision = 'bgdMX6MDKE'; // Default to Boys YPL1
 
-// Division configuration by gender
+// Division configuration (flat — gender included in fullName)
 const divisions = {
     boys: {
-        'bgdMX6MDKE': { name: 'YPL1', fullName: 'Boys Victorian Youth Premier League 1' },
-        'Bjma0zXAdR': { name: 'YPL2', fullName: 'Boys Victorian Youth Premier League 2' },
-        'AnmYznkyNz': { name: 'BVYSL NW', fullName: 'Boys Victorian Youth State League North-West' },
-        '2PmjO2pANZ': { name: 'BVYSL SE', fullName: 'Boys Victorian Youth State League South-East' }
+        'bgdMX6MDKE': { name: 'Boys YPL1', fullName: 'Boys Victorian Youth Premier League 1', combined: true },
+        'Bjma0zXAdR': { name: 'Boys YPL2', fullName: 'Boys Victorian Youth Premier League 2', combined: true },
+        'AnmYznkyNz': { name: 'Boys BVYSL NW', fullName: 'Boys Victorian Youth State League North-West', combined: false },
+        '2PmjO2pANZ': { name: 'Boys BVYSL SE', fullName: 'Boys Victorian Youth State League South-East', combined: false },
+        '3pmvQvbDdv': { name: 'Girls YPL', fullName: 'Girls Victorian Youth Premier League', combined: true },
+        'vbd918ywd4': { name: 'Saturday Mixed', fullName: 'Saturday Mixed', combined: false },
+        'nPmrBVjAmo': { name: 'Sunday Mixed', fullName: 'Sunday Mixed', combined: false },
+        'wOmejBq1N0': { name: "Men's State League", fullName: "Men's State League", combined: false }
     },
-    girls: {
-        '3pmvQvbDdv': { name: 'YGPL', fullName: 'Girls Victorian Youth Premier League' }
-    }
+    girls: {}
 };
+
+const divisionCache = {};
+
+async function fetchAllPagesForLeague(endpoint, leagueId, divisionId) {
+    const baseUrl = 'https://mc-api.dribl.com/api';
+    const params = `date_range=default&season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
+    let allData = [];
+    let cursor = null;
+    let hasMore = true;
+    while (hasMore) {
+        const url = cursor
+            ? `${baseUrl}/${endpoint}?${params}&league=${leagueId}&cursor=${cursor}`
+            : `${baseUrl}/${endpoint}?${params}&league=${leagueId}`;
+        try {
+            const response = await fetch(url);
+            const json = await response.json();
+            if (json.data && json.data.length > 0) allData = allData.concat(json.data);
+            cursor = (json.meta && json.meta.next_cursor) ? json.meta.next_cursor : null;
+            hasMore = !!cursor;
+        } catch (err) {
+            hasMore = false;
+        }
+    }
+    return allData;
+}
+
+async function loadDivisionData(divisionId) {
+    if (divisionCache[divisionId]) return divisionCache[divisionId];
+    const baseUrl = 'https://mc-api.dribl.com/api';
+    try {
+        const leaguesJson = await fetch(`${baseUrl}/list/leagues?season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX`).then(r => r.json());
+        const leagues = leaguesJson.data || [];
+        const [results, fixtures] = await Promise.all([
+            Promise.all(leagues.map(l => fetchAllPagesForLeague('results', l.id, divisionId))).then(a => a.flat()),
+            Promise.all(leagues.map(l => fetchAllPagesForLeague('fixtures', l.id, divisionId))).then(a => a.flat())
+        ]);
+        divisionCache[divisionId] = { leagues, results, fixtures };
+    } catch (e) {
+        divisionCache[divisionId] = { leagues: [], results: [], fixtures: [] };
+    }
+    return divisionCache[divisionId];
+}
 
 // Load all data on page load
 async function loadData(gender = 'boys', divisionId = null) {
     try {
         currentGender = gender;
-        
-        // If no division specified, use first division for the gender
+        const allDivisions = divisions.boys;
+
+        // If no division specified, use first division
         if (!divisionId) {
-            divisionId = Object.keys(divisions[gender])[0];
+            divisionId = Object.keys(allDivisions)[0];
         }
         currentDivision = divisionId;
-        
+
         // Show loading message
-        document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${divisions[gender][divisionId].fullName} data from API...</div>`;
+        document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${allDivisions[divisionId].fullName} data from API...</div>`;
         
         const baseUrl = 'https://mc-api.dribl.com/api';
         const params = `date_range=default&season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
@@ -92,6 +137,7 @@ async function loadData(gender = 'boys', divisionId = null) {
         // Combine all fixtures and results
         fixturesData = fixturesArrays.flat();
         resultsData = resultsArrays.flat();
+        divisionCache[divisionId] = { leagues: leaguesData, results: resultsData, fixtures: fixturesData };
         
         console.log(`Loaded ${leaguesData.length} leagues`);
         console.log(`Loaded ${fixturesData.length} fixtures`);
@@ -151,21 +197,15 @@ function updateLadderDescription(gender) {
     }
 }
 
-// Populate division dropdown based on gender
-function populateDivisionDropdown(gender) {
+// Populate division dropdown
+function populateDivisionDropdown() {
     const divisionSelector = document.getElementById('division-selector');
-    const genderDivisions = divisions[gender];
-    
+    const allDivisions = divisions.boys;
     let options = '';
-    Object.keys(genderDivisions).forEach(divisionId => {
-        options += `<option value="${divisionId}">${genderDivisions[divisionId].fullName}</option>`;
+    Object.keys(allDivisions).forEach(id => {
+        options += `<option value="${id}">${escHtml(allDivisions[id].fullName)}</option>`;
     });
-    
     divisionSelector.innerHTML = options;
-    divisionSelector.value = Object.keys(genderDivisions)[0];
-    
-    // Update ladder description when gender changes
-    updateLadderDescription(gender);
 }
 
 // Refresh data for current division
@@ -208,29 +248,19 @@ function initializeApp() {
     renderFixtures();
     renderResults();
     
-    // Update ladder description for initial gender
     updateLadderDescription(currentGender);
-    
-    // Add gender selector event listener
-    const genderSelector = document.getElementById('gender-selector');
-    genderSelector.value = currentGender;
-    genderSelector.addEventListener('change', (e) => {
-        const newGender = e.target.value;
-        populateDivisionDropdown(newGender);
-        const firstDivision = Object.keys(divisions[newGender])[0];
-        loadData(newGender, firstDivision);
-    });
-    
-    // Add division selector event listener
+
+    // Division selector
     const divisionSelector = document.getElementById('division-selector');
-    populateDivisionDropdown(currentGender);
+    populateDivisionDropdown();
     divisionSelector.value = currentDivision;
     divisionSelector.addEventListener('change', (e) => {
-        loadData(currentGender, e.target.value);
+        localStorage.setItem('vpl_division', e.target.value);
+        loadData('boys', e.target.value);
     });
     
-    // Show combined ladder by default
-    showTab('combined');
+    // Show/hide Combined tab based on division, then show appropriate default tab
+    updateCombinedTabVisibility();
 
     // Handle deep-linked detail URL on page load
     if (window.location.hash) {
@@ -239,6 +269,23 @@ function initializeApp() {
 }
 
 // Tab switching
+function updateCombinedTabVisibility() {
+    const hasCombined = divisions.boys[currentDivision]?.combined !== false;
+    const combinedTab = document.getElementById('tab-combined');
+    if (combinedTab) combinedTab.classList.toggle('hidden', !hasCombined);
+
+    const groupLabel = hasCombined ? 'Age Group' : 'League';
+    const laddersTab = document.getElementById('tab-ladders');
+    if (laddersTab) laddersTab.textContent = hasCombined ? 'Age Group Ladders' : 'Ladders';
+    const laddersHeading = document.querySelector('#content-ladders h2');
+    if (laddersHeading) laddersHeading.textContent = hasCombined ? 'Age Group Ladders' : 'Ladders';
+    document.querySelectorAll('.fixture-group-label, .result-group-label').forEach(el => {
+        el.textContent = groupLabel;
+    });
+
+    showTab(hasCombined ? 'combined' : 'ladders');
+}
+
 function showTab(tabName) {
     lastActiveTab = tabName;
     // Hide all tabs
@@ -307,48 +354,150 @@ function populateFilters() {
         renderResults();
     });
     
-    // Create age group button filters for Fixtures (without "All Age Groups")
-    const fixtureAgeGroupFilters = document.getElementById('fixture-age-group-filters');
-    let fixtureButtonsHtml = '';
-    leaguesData.forEach((league, index) => {
-        const isFirst = index === 0;
-        fixtureButtonsHtml += `
-            <button onclick="filterFixturesByAgeGroup('${league.id}')" class="px-4 py-2 ${isFirst ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} rounded hover:bg-blue-700 fixture-age-btn ${isFirst ? 'active' : ''}" data-league="${league.id}">
-                ${league.name}
-            </button>
-        `;
-    });
-    fixtureAgeGroupFilters.innerHTML = fixtureButtonsHtml;
-    
-    // Create age group button filters for Results (without "All Age Groups")
-    const resultAgeGroupFilters = document.getElementById('result-age-group-filters');
-    let resultButtonsHtml = '';
-    leaguesData.forEach((league, index) => {
-        const isFirst = index === 0;
-        resultButtonsHtml += `
-            <button onclick="filterResultsByAgeGroup('${league.id}')" class="px-4 py-2 ${isFirst ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} rounded hover:bg-blue-700 result-age-btn ${isFirst ? 'active' : ''}" data-league="${league.id}">
-                ${league.name}
-            </button>
-        `;
-    });
-    resultAgeGroupFilters.innerHTML = resultButtonsHtml;
-    
-    // Set first age group as default for both fixtures and results
-    if (leaguesData.length > 0) {
-        selectedFixtureLeague = leaguesData[0].id;
-        selectedResultLeague = leaguesData[0].id;
-    }
+    buildLeagueFilters();
 }
 
 // Global variables to track selected filters
 let selectedFixtureLeague = '';
 let selectedResultLeague = '';
+let selectedLadderLeague = '';
 let selectedFixtureRound = '';
 let selectedResultRound = '';
 let selectedCombinedAgeGroups = new Set(); // empty = all selected
 
 let teamIdMap = {};    // fullTeamName → teamId
 let clubLogoMap = {};  // clubName (suffix-stripped) → logoUrl
+
+let cascadeAge = '';
+let cascadeRegion = '';
+let cascadeGrade = '';
+let cascadeType = '';
+
+function parseLeagueName(name) {
+    if (!name) return null;
+
+    // Men's State League: "State League N Men's - Region[ Reserves]"
+    const stateMatch = name.match(/State League (\d+)\s+Men's\s*-\s*(.+)/i);
+    if (stateMatch) {
+        let region = stateMatch[2].trim();
+        let type = 'Seniors';
+        if (region.endsWith(' Reserves')) {
+            type = 'Reserves';
+            region = region.slice(0, -9).trim();
+        }
+        return { age: stateMatch[1], region, grade: null, type };
+    }
+
+    // Community leagues
+    let n = name.replace(/^\([^)]*\)\s*/, '').replace(/^Mixed\s+/i, '').replace(/^(Saturday|Sunday)\s+/i, '');
+    const regions = ['North-West', 'North-East', 'South-East', 'South-West', 'North', 'South', 'East', 'West'];
+    let region = null;
+    for (const r of regions) {
+        if (n.startsWith(r + ' ')) { region = r; n = n.slice(r.length + 1); break; }
+    }
+    const m = n.match(/^(\d+)([A-D]?)\s*(Blue|Red|Yellow|Green)?/i);
+    if (!m || !region) return null;
+    const grade = [m[2], m[3] ? m[3].charAt(0).toUpperCase() + m[3].slice(1).toLowerCase() : ''].filter(Boolean).join(' ') || null;
+    return { age: m[1], region, grade, type: null };
+}
+
+function buildLeagueFilters() {
+    const parsed = leaguesData.map(l => ({ ...parseLeagueName(l.name), id: l.id }));
+    const useCascade = parsed.some(p => p.region);
+
+    if (!useCascade) {
+        const saved = localStorage.getItem(`vpl_league_${currentGender}_${currentDivision}`);
+        const validId = leaguesData.find(l => l.id === saved) ? saved : leaguesData[0]?.id || '';
+        const opts = leaguesData.map(l => `<option value="${escAttr(l.id)}">${escHtml(l.name)}</option>`).join('');
+        const html = `<select class="league-simple-select border rounded px-3 py-2 text-sm" onchange="setActiveLeague(this.value)">
+            ${opts}
+        </select>`;
+        ['age-group-filters', 'fixture-age-group-filters', 'result-age-group-filters'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        });
+        if (validId) setActiveLeague(validId);
+        return;
+    }
+
+    const savedAge = localStorage.getItem(`vpl_cascade_age_${currentGender}_${currentDivision}`);
+    const savedRegion = localStorage.getItem(`vpl_cascade_region_${currentGender}_${currentDivision}`);
+    const savedGrade = localStorage.getItem(`vpl_cascade_grade_${currentGender}_${currentDivision}`);
+    const savedType = localStorage.getItem(`vpl_cascade_type_${currentGender}_${currentDivision}`);
+    setCascade(savedAge || '', savedRegion || '', savedGrade || '', savedType || '');
+}
+
+function setCascade(age, region, grade, type) {
+    const parsed = leaguesData.map(l => ({ ...parseLeagueName(l.name), id: l.id })).filter(p => p && p.age);
+    const ages = [...new Set(parsed.map(p => p.age))].sort((a, b) => +a - +b);
+
+    cascadeAge = ages.includes(age) ? age : ages[0] || '';
+    const regions = [...new Set(parsed.filter(p => p.age === cascadeAge).map(p => p.region))].sort();
+    cascadeRegion = regions.includes(region) ? region : regions[0] || '';
+    const grades = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.grade).filter(Boolean))].sort();
+    cascadeGrade = grades.includes(grade) ? grade : grades[0] || '';
+    const types = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.type).filter(Boolean))].sort();
+    cascadeType = types.includes(type) ? type : types[0] || '';
+
+    localStorage.setItem(`vpl_cascade_age_${currentGender}_${currentDivision}`, cascadeAge);
+    localStorage.setItem(`vpl_cascade_region_${currentGender}_${currentDivision}`, cascadeRegion);
+    localStorage.setItem(`vpl_cascade_grade_${currentGender}_${currentDivision}`, cascadeGrade);
+    localStorage.setItem(`vpl_cascade_type_${currentGender}_${currentDivision}`, cascadeType);
+
+    const match = parsed.find(p => {
+        if (p.age !== cascadeAge || p.region !== cascadeRegion) return false;
+        if (types.length > 0) return p.type === cascadeType;
+        return p.grade === (cascadeGrade || null);
+    });
+    if (match) setActiveLeague(match.id);
+
+    ['age-group-filters', 'fixture-age-group-filters', 'result-age-group-filters'].forEach(id => {
+        renderCascadeUI(id, parsed, ages);
+    });
+}
+
+function renderCascadeUI(containerId, parsed, ages) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const regions = [...new Set(parsed.filter(p => p.age === cascadeAge).map(p => p.region))].sort();
+    const grades = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.grade).filter(Boolean))].sort();
+    const types = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.type).filter(Boolean))].sort();
+    const isStatLeague = types.length > 0;
+    const ageLabel = isStatLeague ? 'Level' : 'Age';
+    const agePrefix = isStatLeague ? 'State League ' : 'U';
+
+    let html = `<div class="flex flex-wrap gap-3">
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">${ageLabel}</label>
+            <select class="border rounded px-3 py-2 text-sm" onchange="setCascade(this.value,cascadeRegion,cascadeGrade,cascadeType)">
+                ${ages.map(a => `<option value="${a}"${a === cascadeAge ? ' selected' : ''}>${agePrefix}${escHtml(a)}</option>`).join('')}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">Region</label>
+            <select class="border rounded px-3 py-2 text-sm" onchange="setCascade(cascadeAge,this.value,cascadeGrade,cascadeType)">
+                ${regions.map(r => `<option value="${r}"${r === cascadeRegion ? ' selected' : ''}>${escHtml(r)}</option>`).join('')}
+            </select>
+        </div>`;
+    if (grades.length > 0) {
+        html += `<div>
+            <label class="block text-xs text-gray-500 mb-1">Grade</label>
+            <select class="border rounded px-3 py-2 text-sm" onchange="setCascade(cascadeAge,cascadeRegion,this.value,cascadeType)">
+                ${grades.map(g => `<option value="${g}"${g === cascadeGrade ? ' selected' : ''}>${escHtml(g)}</option>`).join('')}
+            </select>
+        </div>`;
+    }
+    if (types.length > 1) {
+        html += `<div>
+            <label class="block text-xs text-gray-500 mb-1">Type</label>
+            <select class="border rounded px-3 py-2 text-sm" onchange="setCascade(cascadeAge,cascadeRegion,cascadeGrade,this.value)">
+                ${types.map(t => `<option value="${t}"${t === cascadeType ? ' selected' : ''}>${escHtml(t)}</option>`).join('')}
+            </select>
+        </div>`;
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+}
 let lastActiveTab = 'combined'; // restored when detail view is dismissed
 
 function escAttr(s) {
@@ -386,6 +535,21 @@ function showMatchTab(name) {
             btn.classList.toggle('text-white', t === name);
             btn.classList.toggle('bg-gray-200', t !== name);
             btn.classList.toggle('text-gray-700', t !== name);
+        }
+    });
+}
+
+function filterTeamTab(section, value) {
+    document.querySelectorAll('.team-tab-' + section).forEach(btn => {
+        btn.classList.toggle('tab-active', btn.dataset.value === value);
+    });
+    let visibleIndex = 0;
+    document.querySelectorAll('.team-row-' + section).forEach(row => {
+        const visible = !value || row.dataset.league === value;
+        row.style.display = visible ? '' : 'none';
+        if (visible) {
+            row.style.backgroundColor = visibleIndex % 2 === 1 ? '#f9fafb' : '';
+            visibleIndex++;
         }
     });
 }
@@ -586,14 +750,10 @@ function renderLineup(players, teamName) {
     const renderPlayer = (p) => {
         const name = escHtml(`${p.first_name} ${p.last_name}`);
         const pos = p.is_goalkeeper ? 'GK' : (p.field_role || '');
-        if (p.has_cards) console.log('CARDS', p.first_name, p.last_name, JSON.stringify(p.cards));
         const cardHtml = p.has_cards
             ? (p.cards || []).map(c => {
-                const ct = (c.type || c.card_type || '').toLowerCase();
-                const hasYellow = ct.includes('yellow') || ct === 'y' || ct === 'yc';
-                const hasRed = ct.includes('red') || ct === 'r' || ct === 'rc';
-                if (hasYellow && hasRed) return '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span><span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>';
-                if (hasYellow) return '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>';
+                const ct = (c.final_card_type || c.first_card_type || c.type || c.card_type || '').toLowerCase();
+                if (ct.includes('yellow')) return '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>';
                 return '<span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>';
               }).join('')
             : '';
@@ -721,8 +881,8 @@ async function renderMatchDetail(id, type) {
 
 async function renderTeamDetail(clubName) {
     const logo = clubLogoMap[clubName] || '';
-    const divisionName = divisions[currentGender][currentDivision]
-        ? divisions[currentGender][currentDivision].fullName
+    const divisionName = divisions.boys[currentDivision]
+        ? divisions.boys[currentDivision].fullName
         : '';
 
     // Season summary (aggregate all age groups)
@@ -758,68 +918,7 @@ async function renderTeamDetail(clubName) {
         }
     });
 
-    // Recent results (last 10, newest first)
-    const clubResults = resultsData
-        .filter(r => {
-            const attrs = r.attributes;
-            return attrs.status === 'complete' &&
-                (getClubName(attrs.home_team_name) === clubName || getClubName(attrs.away_team_name) === clubName);
-        })
-        .sort((a, b) => new Date(b.attributes.date) - new Date(a.attributes.date))
-        .slice(0, 10);
 
-    const recentResultsHtml = clubResults.map(r => {
-        const attrs = r.attributes;
-        const isHome = getClubName(attrs.home_team_name) === clubName;
-        const opponent = isHome ? attrs.away_team_name : attrs.home_team_name;
-        const opponentLogo = isHome ? attrs.away_logo : attrs.home_logo;
-        const clubScore = isHome ? attrs.home_score : attrs.away_score;
-        const oppScore = isHome ? attrs.away_score : attrs.home_score;
-        const outcome = clubScore > oppScore ? 'W' : clubScore < oppScore ? 'L' : 'D';
-        const outcomeColor = outcome === 'W' ? 'bg-green-100 text-green-700' : outcome === 'L' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600';
-        const date = new Date(attrs.date);
-        const dateStr = date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-
-        return `
-            <div class="stripe-row flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
-                 onclick="navigateToMatch('${escAttr(r.hash_id)}', 'result')">
-                <span class="text-xs text-gray-400 w-16">${escHtml(dateStr)}</span>
-                <span class="text-xs font-semibold px-2 py-0.5 rounded ${outcomeColor} w-6 text-center">${outcome}</span>
-                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
-                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
-                <span class="text-sm font-bold">${clubScore}–${oppScore}</span>
-                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
-            </div>`;
-    }).join('');
-
-    // Upcoming fixtures
-    const clubFixtures = fixturesData
-        .filter(f => {
-            const attrs = f.attributes;
-            return attrs.status === 'pending' &&
-                (getClubName(attrs.home_team_name) === clubName || getClubName(attrs.away_team_name) === clubName);
-        })
-        .sort((a, b) => new Date(a.attributes.date) - new Date(b.attributes.date));
-
-    const fixturesHtml = clubFixtures.map(f => {
-        const attrs = f.attributes;
-        const isHome = getClubName(attrs.home_team_name) === clubName;
-        const opponent = isHome ? attrs.away_team_name : attrs.home_team_name;
-        const opponentLogo = isHome ? attrs.away_logo : attrs.home_logo;
-        const date = new Date(attrs.date);
-        const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
-        const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
-
-        return `
-            <div class="stripe-row flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
-                 onclick="navigateToMatch('${escAttr(f.hash_id)}', 'fixture')">
-                <span class="text-xs text-gray-400 w-32">${escHtml(dateStr)} ${escHtml(timeStr)}</span>
-                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
-                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
-                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
-                <span class="text-xs text-gray-400">${escHtml(attrs.full_round || attrs.round)}</span>
-            </div>`;
-    }).join('');
 
     const html = `
         <button onclick="history.back()" class="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold">
@@ -836,6 +935,7 @@ async function renderTeamDetail(clubName) {
             </div>
         </div>
 
+        ${divisions.boys[currentDivision]?.combined ? `
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
             <h3 class="text-lg font-bold mb-4">Season Summary</h3>
             <div class="overflow-x-auto">
@@ -866,53 +966,216 @@ async function renderTeamDetail(clubName) {
                     </tbody>
                 </table>
             </div>
+        </div>` : ''}
+
+        <div id="team-breakdown-section">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="text-center py-4 text-gray-400 text-sm">Loading all divisions...</div>
+            </div>
         </div>
 
-        ${ageGroupRows.length ? `
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-lg font-bold mb-4">Age Group Breakdown</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th class="py-2 pr-4 text-left text-xs font-semibold text-gray-500 uppercase">Age Group</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pos</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">P</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">W</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">D</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">L</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GF</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GA</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GD</th>
-                            <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pts</th>
-                        </tr>
-                    </thead>
-                    <tbody>${ageGroupRows.join('')}</tbody>
-                </table>
+        <div id="team-results-section">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="text-center py-4 text-gray-400 text-sm">Loading results...</div>
             </div>
-        </div>` : ''}
+        </div>
 
-        ${recentResultsHtml ? `
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-lg font-bold mb-4">Recent Results</h3>
-            ${recentResultsHtml}
-        </div>` : ''}
-
-        ${fixturesHtml ? `
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-lg font-bold mb-4">Upcoming Fixtures</h3>
-            ${fixturesHtml}
-        </div>` : ''}
+        <div id="team-fixtures-section">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="text-center py-4 text-gray-400 text-sm">Loading fixtures...</div>
+            </div>
+        </div>
 
     `;
 
     showDetailView(html);
+    populateTeamBreakdown(clubName);
+}
 
+function leagueSortKey(name) {
+    const stateMatch = name.match(/State League (\d+)/i);
+    if (stateMatch) return [1000 + parseInt(stateMatch[1]), name.includes('Reserves') ? 1 : 0, name];
+    const ageMatch = name.match(/U(\d+)/i);
+    return [ageMatch ? parseInt(ageMatch[1]) : 999, 0, name];
+}
+
+async function populateTeamBreakdown(clubName) {
+    const el = document.getElementById('team-breakdown-section');
+    if (!el) return;
+
+    await Promise.all(Object.keys(divisions.boys).map(id => loadDivisionData(id)));
+
+    const rows = [];
+    for (const divId of Object.keys(divisions.boys)) {
+        const cached = divisionCache[divId];
+        if (!cached || !cached.leagues.length) continue;
+        const divName = divisions.boys[divId].fullName;
+        cached.leagues.forEach(league => {
+            const ladder = calculateLadder(league.name, cached.results);
+            const team = ladder.find(t => getClubName(t.name) === clubName);
+            if (!team) return;
+            const pos = ladder.indexOf(team) + 1;
+            rows.push(`
+                <tr class="border-b border-gray-100 last:border-0">
+                    <td class="py-2 pr-4 text-sm">
+                        <div class="font-medium">${escHtml(league.name)}</div>
+                        <div class="text-xs text-gray-400">${escHtml(divName)}</div>
+                    </td>
+                    <td class="py-2 px-4 text-center text-sm font-bold text-blue-600">${pos}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.played}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.won}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.drawn}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.lost}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.goalsFor}</td>
+                    <td class="py-2 px-4 text-center text-sm">${team.goalsAgainst}</td>
+                    <td class="py-2 px-4 text-center text-sm font-semibold ${team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
+                    <td class="py-2 px-4 text-center text-sm font-bold text-blue-600">${team.points}</td>
+                </tr>`);
+        });
+    }
+
+    if (rows.length) {
+        el.innerHTML = `
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-bold mb-4">Division Breakdown</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="py-2 pr-4 text-left text-xs font-semibold text-gray-500 uppercase">League</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pos</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">P</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">W</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">D</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">L</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GF</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GA</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GD</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows.join('')}</tbody>
+                    </table>
+                </div>
+            </div>`;
+    } else {
+        el.innerHTML = '';
+    }
+
+    // Collect all results across divisions
+    const allResults = Object.values(divisionCache).flatMap(d => d.results || []);
+    const clubResults = allResults
+        .filter(r => {
+            const attrs = r.attributes;
+            return attrs.status === 'complete' &&
+                (getClubName(attrs.home_team_name) === clubName || getClubName(attrs.away_team_name) === clubName);
+        })
+        .sort((a, b) => new Date(b.attributes.date) - new Date(a.attributes.date));
+
+    const resultLeagues = [...new Set(clubResults.map(r => r.attributes.league_name))].sort((a, b) => { const ka = leagueSortKey(a), kb = leagueSortKey(b); return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2]); });
+    const resultTabsHtml = resultLeagues.length > 1
+        ? `<div class="mb-4">
+            <select class="border rounded px-3 py-2 text-sm w-full md:w-auto" onchange="filterTeamTab('results', this.value)">
+                ${resultLeagues.map((lg, i) => `<option value="${escAttr(lg)}">${escHtml(lg)}</option>`).join('')}
+            </select>
+           </div>`
+        : '';
+    const recentResultsHtml = clubResults.map(r => {
+        const attrs = r.attributes;
+        const isHome = getClubName(attrs.home_team_name) === clubName;
+        const opponent = isHome ? attrs.away_team_name : attrs.home_team_name;
+        const opponentLogo = isHome ? attrs.away_logo : attrs.home_logo;
+        const clubScore = isHome ? attrs.home_score : attrs.away_score;
+        const oppScore = isHome ? attrs.away_score : attrs.home_score;
+        const outcome = clubScore > oppScore ? 'W' : clubScore < oppScore ? 'L' : 'D';
+        const outcomeColor = outcome === 'W' ? 'bg-green-100 text-green-700' : outcome === 'L' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600';
+        const dateStr = new Date(attrs.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+        return `
+            <div class="team-row-results flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
+                 data-league="${escAttr(attrs.league_name)}"
+                 data-id="${escAttr(r.hash_id)}"
+                 onclick="navigateToMatch(this.dataset.id, 'result')">
+                <span class="text-xs text-gray-400 w-16">${escHtml(dateStr)}</span>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded ${outcomeColor} w-6 text-center">${outcome}</span>
+                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
+                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
+                <span class="text-sm font-bold">${clubScore}–${oppScore}</span>
+                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
+            </div>`;
+    }).join('');
+
+    const resultsEl = document.getElementById('team-results-section');
+    if (resultsEl) {
+        resultsEl.innerHTML = recentResultsHtml
+            ? `<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-bold mb-4">Recent Results</h3>
+                ${resultTabsHtml}${recentResultsHtml}
+               </div>`
+            : '';
+        if (resultLeagues.length > 1) filterTeamTab('results', resultLeagues[0]);
+    }
+
+    // Collect all fixtures across divisions
+    const allFixtures = Object.values(divisionCache).flatMap(d => d.fixtures || []);
+    const clubFixtures = allFixtures
+        .filter(f => {
+            const attrs = f.attributes;
+            return attrs.status === 'pending' &&
+                (getClubName(attrs.home_team_name) === clubName || getClubName(attrs.away_team_name) === clubName);
+        })
+        .sort((a, b) => new Date(a.attributes.date) - new Date(b.attributes.date));
+
+    const fixtureLeagues = [...new Set(clubFixtures.map(f => f.attributes.league_name))].sort((a, b) => { const ka = leagueSortKey(a), kb = leagueSortKey(b); return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2]); });
+    const fixtureTabsHtml = fixtureLeagues.length > 1
+        ? `<div class="mb-4">
+            <select class="border rounded px-3 py-2 text-sm w-full md:w-auto" onchange="filterTeamTab('fixtures', this.value)">
+                ${fixtureLeagues.map((lg, i) => `<option value="${escAttr(lg)}">${escHtml(lg)}</option>`).join('')}
+            </select>
+           </div>`
+        : '';
+    const fixturesHtml = clubFixtures.map(f => {
+        const attrs = f.attributes;
+        const isHome = getClubName(attrs.home_team_name) === clubName;
+        const opponent = isHome ? attrs.away_team_name : attrs.home_team_name;
+        const opponentLogo = isHome ? attrs.away_logo : attrs.home_logo;
+        const date = new Date(attrs.date);
+        const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+        const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+        return `
+            <div class="team-row-fixtures flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
+                 data-league="${escAttr(attrs.league_name)}"
+                 data-id="${escAttr(f.hash_id)}"
+                 onclick="navigateToMatch(this.dataset.id, 'fixture')">
+                <span class="text-xs text-gray-400 w-32">${escHtml(dateStr)} ${escHtml(timeStr)}</span>
+                <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
+                <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
+                <span class="text-xs text-gray-400">${escHtml(attrs.league_name)}</span>
+                <span class="text-xs text-gray-400">${escHtml(attrs.full_round || attrs.round)}</span>
+            </div>`;
+    }).join('');
+
+    const fixturesEl = document.getElementById('team-fixtures-section');
+    if (fixturesEl) {
+        fixturesEl.innerHTML = fixturesHtml
+            ? `<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-bold mb-4">Upcoming Fixtures</h3>
+                ${fixtureTabsHtml}${fixturesHtml}
+               </div>`
+            : '';
+        if (fixtureLeagues.length > 1) filterTeamTab('fixtures', fixtureLeagues[0]);
+    }
 }
 
 // Populate combined ladder age group toggle buttons
+function saveChipSelection() {
+    const key = `vpl_chips_${currentGender}_${currentDivision}`;
+    localStorage.setItem(key, JSON.stringify([...selectedCombinedAgeGroups]));
+}
+
 function populateCombinedLadderFilters() {
-    selectedCombinedAgeGroups = new Set(); // reset to "all" on data reload
+    const key = `vpl_chips_${currentGender}_${currentDivision}`;
+    const saved = localStorage.getItem(key);
+    selectedCombinedAgeGroups = saved ? new Set(JSON.parse(saved)) : new Set();
     const container = document.getElementById('combined-age-group-filters');
     let html = `
         <button onclick="selectAllCombinedAgeGroups(this)" id="combined-age-all-btn"
@@ -929,6 +1192,7 @@ function populateCombinedLadderFilters() {
         `;
     });
     container.innerHTML = html;
+    updateCombinedAgeGroupButtons();
 }
 
 // Toggle a single age group on the combined ladder
@@ -948,6 +1212,7 @@ function toggleCombinedAgeGroup(leagueId, el) {
             selectedCombinedAgeGroups = new Set();
         }
     }
+    saveChipSelection();
     updateCombinedAgeGroupButtons();
     renderCombinedLadder();
     el.blur();
@@ -956,6 +1221,7 @@ function toggleCombinedAgeGroup(leagueId, el) {
 // Reset combined ladder to show all age groups
 function selectAllCombinedAgeGroups(el) {
     selectedCombinedAgeGroups = new Set();
+    saveChipSelection();
     updateCombinedAgeGroupButtons();
     renderCombinedLadder();
     if (el) el.blur();
@@ -1015,41 +1281,27 @@ function buildLookupMaps() {
 }
 
 // Filter fixtures by age group
-function filterFixturesByAgeGroup(leagueId) {
+function setActiveLeague(leagueId) {
     selectedFixtureLeague = leagueId;
-    
-    // Update button styles
-    document.querySelectorAll('.fixture-age-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white', 'active');
-        btn.classList.add('bg-gray-200', 'text-gray-700');
-    });
-    event.target.classList.remove('bg-gray-200', 'text-gray-700');
-    event.target.classList.add('bg-blue-600', 'text-white', 'active');
-    
-    renderFixtures();
-}
-
-// Filter results by age group
-function filterResultsByAgeGroup(leagueId) {
     selectedResultLeague = leagueId;
-    
-    // Update button styles
-    document.querySelectorAll('.result-age-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white', 'active');
-        btn.classList.add('bg-gray-200', 'text-gray-700');
+    selectedLadderLeague = leagueId;
+    localStorage.setItem(`vpl_league_${currentGender}_${currentDivision}`, leagueId);
+    document.querySelectorAll('.age-group-ladder').forEach(el => {
+        el.style.display = el.dataset.league === leagueId ? 'block' : 'none';
     });
-    event.target.classList.remove('bg-gray-200', 'text-gray-700');
-    event.target.classList.add('bg-blue-600', 'text-white', 'active');
-    
+    document.querySelectorAll('.league-simple-select').forEach(el => { el.value = leagueId; });
+    renderFixtures();
     renderResults();
 }
 
+
 // Calculate ladder for a specific age group
-function calculateLadder(leagueName) {
+function calculateLadder(leagueName, results) {
+    const data = results || resultsData;
     const teams = {};
-    
+
     // Process results for this league
-    resultsData
+    data
         .filter(result => result.attributes.league_name === leagueName)
         .forEach(result => {
             const attrs = result.attributes;
@@ -1126,8 +1378,8 @@ function calculateLadder(leagueName) {
 
 // Extract club name from team name (remove age group suffix)
 function getClubName(teamName) {
-    // Remove U13, U14, U15, U16, U17, U18 suffixes
-    return teamName.replace(/\s+(U13|U14|U15|U16|U17|U18)$/i, '').trim();
+    if (!teamName) return '';
+    return teamName.replace(/\s+(U\d+|Seniors|Reserves)$/i, '').trim();
 }
 
 // Calculate combined club ladder
@@ -1288,20 +1540,6 @@ function renderAgeGroupLadders() {
     const filtersContainer = document.getElementById('age-group-filters');
     const laddersContainer = document.getElementById('age-group-ladders');
     
-    // Create filter buttons (without "All Age Groups")
-    let filterHtml = '';
-    
-    leaguesData.forEach((league, index) => {
-        const isFirst = index === 0;
-        filterHtml += `
-            <button onclick="showAgeGroup('${league.id}')" class="px-4 py-2 ${isFirst ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} rounded hover:bg-blue-700 age-group-btn ${isFirst ? 'active' : ''}" data-league="${league.id}">
-                ${league.name}
-            </button>
-        `;
-    });
-    
-    filtersContainer.innerHTML = filterHtml;
-    
     // Render all ladders
     let laddersHtml = '';
     
@@ -1366,26 +1604,14 @@ function renderAgeGroupLadders() {
     
     laddersContainer.innerHTML = laddersHtml;
     
-    // Show only the first age group by default
     if (leaguesData.length > 0) {
-        document.querySelectorAll('.age-group-ladder').forEach((el, index) => {
-            el.style.display = index === 0 ? 'block' : 'none';
+        const targetId = selectedLadderLeague || leaguesData[0].id;
+        document.querySelectorAll('.age-group-ladder').forEach(el => {
+            el.style.display = el.dataset.league === targetId ? 'block' : 'none';
         });
     }
 }
 
-// Show specific age group
-function showAgeGroup(leagueId) {
-    document.querySelectorAll('.age-group-ladder').forEach(el => {
-        el.style.display = el.dataset.league === leagueId ? 'block' : 'none';
-    });
-    document.querySelectorAll('.age-group-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white', 'active');
-        btn.classList.add('bg-gray-200', 'text-gray-700');
-    });
-    event.target.classList.remove('bg-gray-200', 'text-gray-700');
-    event.target.classList.add('bg-blue-600', 'text-white', 'active');
-}
 
 // Render fixtures
 function renderFixtures() {
@@ -1465,15 +1691,19 @@ function renderFixtures() {
                         <div class="flex-1">
                             <div class="flex items-center justify-center gap-4 mb-2">
                                 <div class="flex items-center gap-2 flex-1 justify-end">
-                                    <span class="font-semibold text-right text-blue-700 hover:underline"
-                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>
-                                    <img src="${escAttr(attrs.home_logo)}" alt="${escAttr(attrs.home_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    ${attrs.home_team_name
+                                        ? `<span class="font-semibold text-right text-blue-700 hover:underline"
+                                              onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>`
+                                        : `<span class="text-gray-400 text-sm">Bye</span>`}
+                                    <img src="${escAttr(attrs.home_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
                                 </div>
                                 <span class="text-gray-400 font-bold px-2">-</span>
                                 <div class="flex items-center gap-2 flex-1">
-                                    <img src="${escAttr(attrs.away_logo)}" alt="${escAttr(attrs.away_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                                    <span class="font-semibold text-blue-700 hover:underline"
-                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>
+                                    <img src="${escAttr(attrs.away_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    ${attrs.away_team_name
+                                        ? `<span class="font-semibold text-blue-700 hover:underline"
+                                              onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>`
+                                        : `<span class="text-gray-400 text-sm">Bye</span>`}
                                 </div>
                             </div>
                             <div class="text-center text-xs text-gray-600 flex items-center justify-center gap-2">
@@ -1579,9 +1809,11 @@ function renderResults() {
                         <div class="flex-1">
                             <div class="flex items-center justify-center gap-4 mb-2">
                                 <div class="flex items-center gap-2 flex-1 justify-end">
-                                    <span class="font-semibold text-right text-blue-700 hover:underline"
-                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>
-                                    <img src="${escAttr(attrs.home_logo)}" alt="${escAttr(attrs.home_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    ${attrs.home_team_name
+                                        ? `<span class="font-semibold text-right text-blue-700 hover:underline"
+                                              onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>`
+                                        : `<span class="text-gray-400 text-sm">Bye</span>`}
+                                    <img src="${escAttr(attrs.home_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xl font-bold ${attrs.home_score > attrs.away_score ? 'text-green-600' : 'text-gray-600'}">${attrs.home_score}</span>
@@ -1589,9 +1821,11 @@ function renderResults() {
                                     <span class="text-xl font-bold ${attrs.away_score > attrs.home_score ? 'text-green-600' : 'text-gray-600'}">${attrs.away_score}</span>
                                 </div>
                                 <div class="flex items-center gap-2 flex-1">
-                                    <img src="${escAttr(attrs.away_logo)}" alt="${escAttr(attrs.away_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                                    <span class="font-semibold text-blue-700 hover:underline"
-                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>
+                                    <img src="${escAttr(attrs.away_logo || '')}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    ${attrs.away_team_name
+                                        ? `<span class="font-semibold text-blue-700 hover:underline"
+                                              onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>`
+                                        : `<span class="text-gray-400 text-sm">Bye</span>`}
                                 </div>
                             </div>
                             <div class="text-center text-xs text-gray-600 flex items-center justify-center gap-2">
@@ -1621,10 +1855,17 @@ function renderResults() {
 }
 
 // Load data when page loads — works whether script is static or dynamically injected
+function getInitialSelection() {
+    const savedDivision = localStorage.getItem('vpl_division');
+    const allDivisions = divisions.boys;
+    const division = savedDivision && allDivisions[savedDivision] ? savedDivision : Object.keys(allDivisions)[0];
+    return { gender: 'boys', division };
+}
+
 if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', () => loadData('boys', 'bgdMX6MDKE'));
+    window.addEventListener('DOMContentLoaded', () => { const s = getInitialSelection(); loadData(s.gender, s.division); });
 } else {
-    loadData('boys', 'bgdMX6MDKE');
+    const s = getInitialSelection(); loadData(s.gender, s.division);
 }
 
 window.addEventListener('hashchange', handleHashChange);
