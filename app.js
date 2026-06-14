@@ -201,6 +201,7 @@ async function refreshData() {
 
 // Initialize the application
 function initializeApp() {
+    buildLookupMaps();
     populateFilters();
     renderCombinedLadder();
     renderAgeGroupLadders();
@@ -340,6 +341,10 @@ let selectedFixtureRound = '';
 let selectedResultRound = '';
 let selectedCombinedAgeGroups = new Set(); // empty = all selected
 
+let teamIdMap = {};    // fullTeamName → teamId
+let clubLogoMap = {};  // clubName (suffix-stripped) → logoUrl
+let lastActiveTab = 'combined'; // restored when detail view is dismissed
+
 // Populate combined ladder age group toggle buttons
 function populateCombinedLadderFilters() {
     selectedCombinedAgeGroups = new Set(); // reset to "all" on data reload
@@ -421,6 +426,27 @@ function updateCombinedAgeGroupButtons() {
             summaryEl.classList.remove('hidden');
         }
     }
+}
+
+function buildLookupMaps() {
+    teamIdMap = {};
+    clubLogoMap = {};
+
+    const processEntry = (attrs) => {
+        if (attrs.home_team_id && attrs.home_team_name) {
+            teamIdMap[attrs.home_team_name] = attrs.home_team_id;
+            const club = getClubName(attrs.home_team_name);
+            if (attrs.home_logo) clubLogoMap[club] = attrs.home_logo;
+        }
+        if (attrs.away_team_id && attrs.away_team_name) {
+            teamIdMap[attrs.away_team_name] = attrs.away_team_id;
+            const club = getClubName(attrs.away_team_name);
+            if (attrs.away_logo) clubLogoMap[club] = attrs.away_logo;
+        }
+    };
+
+    fixturesData.forEach(f => processEntry(f.attributes));
+    resultsData.forEach(r => processEntry(r.attributes));
 }
 
 // Filter fixtures by age group
