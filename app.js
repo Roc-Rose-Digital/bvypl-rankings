@@ -1306,45 +1306,48 @@ function renderFixtures() {
             const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
             
             html += `
-                <div class="p-6 hover:bg-gray-50 border-b border-gray-100">
+                <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
+                     onclick="navigateToMatch('${escAttr(fixture.id)}', 'fixture')">
                     <div class="flex items-center gap-4">
                         <!-- Date and Time -->
                         <div class="text-sm text-gray-600 w-32">
-                            <div class="font-medium">${dateStr}</div>
-                            <div>${timeStr}</div>
+                            <div class="font-medium">${escHtml(dateStr)}</div>
+                            <div>${escHtml(timeStr)}</div>
                         </div>
-                        
+
                         <!-- Teams and Info -->
                         <div class="flex-1">
                             <div class="flex items-center justify-center gap-4 mb-2">
                                 <div class="flex items-center gap-2 flex-1 justify-end">
-                                    <span class="font-semibold text-right">${attrs.home_team_name}</span>
-                                    <img src="${attrs.home_logo}" alt="${attrs.home_team_name}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    <span class="font-semibold text-right text-blue-700 hover:underline"
+                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>
+                                    <img src="${escAttr(attrs.home_logo)}" alt="${escAttr(attrs.home_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
                                 </div>
                                 <span class="text-gray-400 font-bold px-2">-</span>
                                 <div class="flex items-center gap-2 flex-1">
-                                    <img src="${attrs.away_logo}" alt="${attrs.away_team_name}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                                    <span class="font-semibold">${attrs.away_team_name}</span>
+                                    <img src="${escAttr(attrs.away_logo)}" alt="${escAttr(attrs.away_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    <span class="font-semibold text-blue-700 hover:underline"
+                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>
                                 </div>
                             </div>
                             <div class="text-center text-xs text-gray-600 flex items-center justify-center gap-2">
-                                <span>${attrs.league_name}</span>
+                                <span>${escHtml(attrs.league_name)}</span>
                                 <span class="text-gray-400">•</span>
-                                <span class="text-gray-500">${attrs.ground_name}</span>
-                                ${attrs.field_name ? `<span class="text-gray-400">•</span><span class="text-gray-500">${attrs.field_name}</span>` : ''}
+                                <span class="text-gray-500">${escHtml(attrs.ground_name)}</span>
+                                ${attrs.field_name ? `<span class="text-gray-400">•</span><span class="text-gray-500">${escHtml(attrs.field_name)}</span>` : ''}
                             </div>
                         </div>
-                        
+
                         <!-- Round -->
                         <div class="text-sm text-right w-24">
-                            <div class="font-medium">${attrs.round}</div>
+                            <div class="font-medium">${escHtml(attrs.round)}</div>
                         </div>
                     </div>
                 </div>
             `;
             });
         });
-        
+
         html += `
                 </div>
             </div>
