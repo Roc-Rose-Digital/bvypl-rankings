@@ -1421,19 +1421,21 @@ function renderResults() {
             const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             
             html += `
-                <div class="p-6 hover:bg-gray-50 border-b border-gray-100">
+                <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
+                     onclick="navigateToMatch('${escAttr(result.id)}', 'result')">
                     <div class="flex items-center gap-4">
                         <!-- Date -->
                         <div class="text-sm text-gray-600 w-32">
-                            <div class="font-medium">${dateStr}</div>
+                            <div class="font-medium">${escHtml(dateStr)}</div>
                         </div>
-                        
+
                         <!-- Teams with Scores and Info -->
                         <div class="flex-1">
                             <div class="flex items-center justify-center gap-4 mb-2">
                                 <div class="flex items-center gap-2 flex-1 justify-end">
-                                    <span class="font-semibold text-right">${attrs.home_team_name}</span>
-                                    <img src="${attrs.home_logo}" alt="${attrs.home_team_name}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    <span class="font-semibold text-right text-blue-700 hover:underline"
+                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.home_team_name))}')">${escHtml(attrs.home_team_name)}</span>
+                                    <img src="${escAttr(attrs.home_logo)}" alt="${escAttr(attrs.home_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xl font-bold ${attrs.home_score > attrs.away_score ? 'text-green-600' : 'text-gray-600'}">${attrs.home_score}</span>
@@ -1441,20 +1443,21 @@ function renderResults() {
                                     <span class="text-xl font-bold ${attrs.away_score > attrs.home_score ? 'text-green-600' : 'text-gray-600'}">${attrs.away_score}</span>
                                 </div>
                                 <div class="flex items-center gap-2 flex-1">
-                                    <img src="${attrs.away_logo}" alt="${attrs.away_team_name}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
-                                    <span class="font-semibold">${attrs.away_team_name}</span>
+                                    <img src="${escAttr(attrs.away_logo)}" alt="${escAttr(attrs.away_team_name)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                                    <span class="font-semibold text-blue-700 hover:underline"
+                                          onclick="event.stopPropagation(); navigateToTeam('${escAttr(getClubName(attrs.away_team_name))}')">${escHtml(attrs.away_team_name)}</span>
                                 </div>
                             </div>
                             <div class="text-center text-xs text-gray-600 flex items-center justify-center gap-2">
-                                <span>${attrs.league_name}</span>
+                                <span>${escHtml(attrs.league_name)}</span>
                                 <span class="text-gray-400">•</span>
-                                <span class="text-gray-500">${attrs.ground_name}</span>
+                                <span class="text-gray-500">${escHtml(attrs.ground_name)}</span>
                             </div>
                         </div>
-                        
+
                         <!-- Round -->
                         <div class="text-sm text-right w-24">
-                            <div class="font-medium">${attrs.round}</div>
+                            <div class="font-medium">${escHtml(attrs.round)}</div>
                         </div>
                     </div>
                 </div>
