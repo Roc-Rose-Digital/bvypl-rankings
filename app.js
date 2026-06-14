@@ -510,25 +510,45 @@ function renderMatchCentre(data) {
         html += `</div></div>`;
     }
 
-    // Goals timeline
-    const goals = (a.match_events || []).filter(ev => ev.type === 'goal');
-    if (goals.length) {
+    // Match events timeline (goals + cards)
+    const matchEvents = (a.match_events || []).filter(ev =>
+        ev.type === 'goal' || ev.type === 'yellow_card' || ev.type === 'red_card' || ev.type === 'yellow_red_card'
+    ).sort((a, b) => (parseInt(a.minute) || 0) - (parseInt(b.minute) || 0));
+    if (matchEvents.length) {
         html += `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
-            <h3 class="text-lg font-semibold mb-4">Goals</h3><div>`;
+            <h3 class="text-lg font-semibold mb-4">Match Events</h3><div>`;
         let prevHome = 0;
-        goals.forEach(ev => {
-            const isHome = ev.home_score > prevHome;
-            const team = escHtml(isHome ? (a.home_team_name || '') : (a.away_team_name || ''));
-            const color = escAttr(isHome ? (a.home_club_color || '#2563eb') : (a.away_club_color || '#6b7280'));
-            const note = ev.own_goal ? ' (OG)' : ev.penalty_kick ? ' (Pen)' : '';
-            html += `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                <span class="text-sm font-bold text-gray-400 w-8 text-right">${escHtml(String(ev.minute))}'</span>
-                <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${color}"></div>
-                <span class="flex-1 text-sm">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}${note ? ` <span class="text-gray-500 text-xs">${escHtml(note)}</span>` : ''}</span>
-                <span class="text-xs text-gray-500 w-32 text-right">${team}</span>
-                <span class="text-sm font-bold tabular-nums w-10 text-right">${ev.home_score}–${ev.away_score}</span>
-            </div>`;
-            prevHome = ev.home_score;
+        matchEvents.forEach(ev => {
+            if (ev.type === 'goal') {
+                const isHome = ev.home_score > prevHome;
+                const team = escHtml(isHome ? (a.home_team_name || '') : (a.away_team_name || ''));
+                const color = escAttr(isHome ? (a.home_club_color || '#2563eb') : (a.away_club_color || '#6b7280'));
+                const note = ev.own_goal ? ' (OG)' : ev.penalty_kick ? ' (Pen)' : '';
+                html += `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                    <span class="text-sm font-bold text-gray-400 w-8 text-right">${escHtml(String(ev.minute))}'</span>
+                    <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${color}"></div>
+                    <span class="flex-1 text-sm">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}${note ? ` <span class="text-gray-500 text-xs">${escHtml(note)}</span>` : ''}</span>
+                    <span class="text-xs text-gray-500 w-32 text-right">${team}</span>
+                    <span class="text-sm font-bold tabular-nums w-10 text-right">${ev.home_score}–${ev.away_score}</span>
+                </div>`;
+                prevHome = ev.home_score;
+            } else {
+                const cardType = ev.type;
+                const cardIcon = cardType === 'yellow_card'
+                    ? '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>'
+                    : cardType === 'yellow_red_card'
+                        ? '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span><span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>'
+                        : '<span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>';
+                const isHome = ev.team_hash_id === a.home_team_hash_id;
+                const team = escHtml(isHome ? (a.home_team_name || '') : (a.away_team_name || ''));
+                html += `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                    <span class="text-sm font-bold text-gray-400 w-8 text-right">${escHtml(String(ev.minute))}'</span>
+                    <div class="flex gap-0.5">${cardIcon}</div>
+                    <span class="flex-1 text-sm">${escHtml(ev.name || '—')}${ev.jersey ? ` <span class="text-gray-400 text-xs">#${ev.jersey}</span>` : ''}</span>
+                    <span class="text-xs text-gray-500 w-32 text-right">${team}</span>
+                    <span class="w-10"></span>
+                </div>`;
+            }
         });
         html += `</div></div>`;
     }
@@ -566,12 +586,16 @@ function renderLineup(players, teamName) {
     const renderPlayer = (p) => {
         const name = escHtml(`${p.first_name} ${p.last_name}`);
         const pos = p.is_goalkeeper ? 'GK' : (p.field_role || '');
+        if (p.has_cards) console.log('CARDS', p.first_name, p.last_name, JSON.stringify(p.cards));
         const cardHtml = p.has_cards
-            ? (p.cards || []).map(c =>
-                (c.type || c.card_type) === 'yellow'
-                    ? '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>'
-                    : '<span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>'
-              ).join('')
+            ? (p.cards || []).map(c => {
+                const ct = (c.type || c.card_type || '').toLowerCase();
+                const hasYellow = ct.includes('yellow') || ct === 'y' || ct === 'yc';
+                const hasRed = ct.includes('red') || ct === 'r' || ct === 'rc';
+                if (hasYellow && hasRed) return '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span><span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>';
+                if (hasYellow) return '<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>';
+                return '<span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle"></span>';
+              }).join('')
             : '';
         const goalHtml = p.has_goals && p.goals && p.goals.length
             ? `<span class="text-xs text-gray-500">${p.goals.length > 1 ? p.goals.length + 'G' : 'G'}</span>`
