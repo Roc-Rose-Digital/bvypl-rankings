@@ -457,7 +457,7 @@ function renderApiSection(data, title, skipFields) {
 
 async function renderMatchDetail(id, type) {
     const dataSet = type === 'result' ? resultsData : fixturesData;
-    const match = dataSet[parseInt(id)];
+    const match = dataSet.find(m => m.hash_id === id);
 
     if (!match) {
         showDetailView(`
@@ -523,37 +523,25 @@ async function renderMatchDetail(id, type) {
     showDetailView(headerHtml);
 
     const endpoint = type === 'result' ? 'results' : 'fixtures';
-    const matchId = match.attributes.id || match.attributes.result_id || match.attributes.fixture_id;
-    const url = `https://mc-api.dribl.com/api/${endpoint}/${matchId}?tenant=w8zdBWPmBX&timezone=Australia%2FSydney`;
+    const matchHashId = attrs.match_hash_id;
+    const homeTeamHashId = attrs.home_team_hash_id;
+    const awayTeamHashId = attrs.away_team_hash_id;
 
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        const json = await response.json();
-        const detail = json.data;
+    const safeFetch = url => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
 
-        const skipFields = [
-            'home_team_name', 'away_team_name', 'home_score', 'away_score',
-            'date', 'round', 'full_round', 'ground_name', 'field_name',
-            'league_name', 'home_logo', 'away_logo', 'status'
-        ];
+    const [centreResult, homeResult, awayResult] = await Promise.all([
+        matchHashId ? safeFetch(`https://mc-api.dribl.com/api/matchcentre/${matchHashId}?tenant=w8zdBWPmBX`) : null,
+        matchHashId && homeTeamHashId ? safeFetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${matchHashId}/team/${homeTeamHashId}?tenant=w8zdBWPmBX`) : null,
+        matchHashId && awayTeamHashId ? safeFetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${matchHashId}/team/${awayTeamHashId}?tenant=w8zdBWPmBX`) : null,
+    ]);
 
-        let sections = '';
-        if (detail && detail.attributes) {
-            sections += renderApiSection(detail.attributes, 'Match Details', skipFields);
-        }
-        if (detail && detail.relationships) {
-            sections += renderApiSection(detail.relationships, 'Related Data', []);
-        }
+    let sections = '';
+    if (centreResult) sections += renderApiSection(centreResult, 'Match Centre', []);
+    if (homeResult) sections += renderApiSection(homeResult, attrs.home_team_name + ' Lineup', []);
+    if (awayResult) sections += renderApiSection(awayResult, attrs.away_team_name + ' Lineup', []);
 
-        const apiContainer = document.getElementById('match-api-data');
-        if (apiContainer) {
-            apiContainer.innerHTML = sections || '';
-        }
-    } catch (err) {
-        const apiContainer = document.getElementById('match-api-data');
-        if (apiContainer) apiContainer.innerHTML = '';
-    }
+    const apiContainer = document.getElementById('match-api-data');
+    if (apiContainer) apiContainer.innerHTML = sections || '';
 }
 
 async function renderTeamDetail(clubName) {
@@ -619,7 +607,7 @@ async function renderTeamDetail(clubName) {
 
         return `
             <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
-                 onclick="navigateToMatch('${resultsData.indexOf(r)}', 'result')">
+                 onclick="navigateToMatch('${escAttr(r.hash_id)}', 'result')">
                 <span class="text-xs text-gray-400 w-16">${escHtml(dateStr)}</span>
                 <span class="text-xs font-semibold px-2 py-0.5 rounded ${outcomeColor} w-6 text-center">${outcome}</span>
                 <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
@@ -649,7 +637,7 @@ async function renderTeamDetail(clubName) {
 
         return `
             <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
-                 onclick="navigateToMatch('${fixturesData.indexOf(f)}', 'fixture')">
+                 onclick="navigateToMatch('${escAttr(f.hash_id)}', 'fixture')">
                 <span class="text-xs text-gray-400 w-32">${escHtml(dateStr)} ${escHtml(timeStr)}</span>
                 <img src="${escAttr(opponentLogo)}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
                 <span class="flex-1 text-sm">${isHome ? 'vs' : '@'} ${escHtml(opponent)}</span>
@@ -853,13 +841,13 @@ function buildLookupMaps() {
     clubLogoMap = {};
 
     const processEntry = (attrs) => {
-        if (attrs.home_team_id && attrs.home_team_name) {
-            teamIdMap[attrs.home_team_name] = attrs.home_team_id;
+        if (attrs.home_team_hash_id && attrs.home_team_name) {
+            teamIdMap[attrs.home_team_name] = attrs.home_team_hash_id;
             const club = getClubName(attrs.home_team_name);
             if (attrs.home_logo) clubLogoMap[club] = attrs.home_logo;
         }
-        if (attrs.away_team_id && attrs.away_team_name) {
-            teamIdMap[attrs.away_team_name] = attrs.away_team_id;
+        if (attrs.away_team_hash_id && attrs.away_team_name) {
+            teamIdMap[attrs.away_team_name] = attrs.away_team_hash_id;
             const club = getClubName(attrs.away_team_name);
             if (attrs.away_logo) clubLogoMap[club] = attrs.away_logo;
         }
@@ -1308,7 +1296,7 @@ function renderFixtures() {
             
             html += `
                 <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
-                     onclick="navigateToMatch('${fixturesData.indexOf(fixture)}', 'fixture')">
+                     onclick="navigateToMatch('${escAttr(fixture.hash_id)}', 'fixture')">
                     <div class="flex items-center gap-4">
                         <!-- Date and Time -->
                         <div class="text-sm text-gray-600 w-32">
@@ -1423,7 +1411,7 @@ function renderResults() {
             
             html += `
                 <div class="p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
-                     onclick="navigateToMatch('${resultsData.indexOf(result)}', 'result')">
+                     onclick="navigateToMatch('${escAttr(result.hash_id)}', 'result')">
                     <div class="flex items-center gap-4">
                         <!-- Date -->
                         <div class="text-sm text-gray-600 w-32">
