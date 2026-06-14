@@ -376,6 +376,20 @@ function hideDetailView() {
     showTab(lastActiveTab);
 }
 
+function showMatchTab(name) {
+    ['summary', 'home', 'away'].forEach(t => {
+        const panel = document.getElementById('match-panel-' + t);
+        const btn = document.getElementById('match-tab-' + t);
+        if (panel) panel.classList.toggle('hidden', t !== name);
+        if (btn) {
+            btn.classList.toggle('bg-blue-600', t === name);
+            btn.classList.toggle('text-white', t === name);
+            btn.classList.toggle('bg-gray-200', t !== name);
+            btn.classList.toggle('text-gray-700', t !== name);
+        }
+    });
+}
+
 function navigateToMatch(id, type) {
     window.location.hash = 'match/' + type + '/' + id;
 }
@@ -473,6 +487,27 @@ function renderMatchCentre(data) {
             }
             ${a.ground_address ? `<div class="text-xs text-gray-500 mt-1">${escHtml(a.ground_address)}</div>` : ''}
         </div>`;
+    }
+
+    // Match info (half-time score, duration, status)
+    const infoRows = [];
+    if (a.game_progress === 'ft') infoRows.push(['Status', 'Full Time']);
+    else if (a.game_progress === 'et') infoRows.push(['Status', 'After Extra Time']);
+    else if (a.game_progress === 'pen') infoRows.push(['Status', 'After Penalties']);
+    if (a.home_score_half != null && a.away_score_half != null) infoRows.push(['Half-Time Score', `${a.home_score_half}–${a.away_score_half}`]);
+    if (a.ft_first_half_duration) infoRows.push(['Half Duration', `${a.ft_first_half_duration} min`]);
+    if (a.home_score_penalty != null && a.away_score_penalty != null) infoRows.push(['Penalties', `${a.home_score_penalty}–${a.away_score_penalty}`]);
+    if (infoRows.length) {
+        html += `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
+            <h3 class="text-lg font-semibold mb-3">Match Info</h3>
+            <div>`;
+        infoRows.forEach(([label, value]) => {
+            html += `<div class="flex py-2 border-b border-gray-100 last:border-0">
+                <span class="w-40 text-xs font-semibold text-gray-500 uppercase pt-0.5">${escHtml(label)}</span>
+                <span class="text-sm text-gray-800">${escHtml(String(value))}</span>
+            </div>`;
+        });
+        html += `</div></div>`;
     }
 
     // Goals timeline
@@ -628,13 +663,17 @@ async function renderMatchDetail(id, type) {
                 <div>${escHtml(attrs.ground_name)}${attrs.field_name ? ' · ' + escHtml(attrs.field_name) : ''}</div>
             </div>
         </div>
-        <div id="match-api-data">
-            <div class="text-center py-4 text-gray-400 text-sm">Loading additional match data...</div>
-        </div>`;
+        <div class="flex gap-2 mb-4 flex-wrap">
+            <button onclick="showMatchTab('summary')" id="match-tab-summary" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Summary</button>
+            <button onclick="showMatchTab('home')" id="match-tab-home" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-blue-700 hover:text-white text-sm">${escHtml(getClubName(attrs.home_team_name))}</button>
+            <button onclick="showMatchTab('away')" id="match-tab-away" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-blue-700 hover:text-white text-sm">${escHtml(getClubName(attrs.away_team_name))}</button>
+        </div>
+        <div id="match-panel-summary"><div class="text-center py-4 text-gray-400 text-sm">Loading...</div></div>
+        <div id="match-panel-home" class="hidden"><div class="text-center py-4 text-gray-400 text-sm">Loading...</div></div>
+        <div id="match-panel-away" class="hidden"><div class="text-center py-4 text-gray-400 text-sm">Loading...</div></div>`;
 
     showDetailView(headerHtml);
 
-    const endpoint = type === 'result' ? 'results' : 'fixtures';
     const matchHashId = attrs.match_hash_id;
     const homeTeamHashId = attrs.home_team_hash_id;
     const awayTeamHashId = attrs.away_team_hash_id;
@@ -647,13 +686,13 @@ async function renderMatchDetail(id, type) {
         matchHashId && awayTeamHashId ? safeFetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${matchHashId}/team/${awayTeamHashId}?tenant=w8zdBWPmBX`) : null,
     ]);
 
-    let sections = '';
-    if (centreResult) sections += renderMatchCentre(centreResult);
-    if (homeResult) sections += renderLineup(homeResult, attrs.home_team_name);
-    if (awayResult) sections += renderLineup(awayResult, attrs.away_team_name);
+    const summaryEl = document.getElementById('match-panel-summary');
+    const homeEl = document.getElementById('match-panel-home');
+    const awayEl = document.getElementById('match-panel-away');
 
-    const apiContainer = document.getElementById('match-api-data');
-    if (apiContainer) apiContainer.innerHTML = sections || '';
+    if (summaryEl) summaryEl.innerHTML = centreResult ? renderMatchCentre(centreResult) : '<div class="text-center py-4 text-gray-400 text-sm">No data available.</div>';
+    if (homeEl) homeEl.innerHTML = homeResult ? renderLineup(homeResult, attrs.home_team_name) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
+    if (awayEl) awayEl.innerHTML = awayResult ? renderLineup(awayResult, attrs.away_team_name) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
 }
 
 async function renderTeamDetail(clubName) {
