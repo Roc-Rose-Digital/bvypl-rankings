@@ -455,6 +455,106 @@ function renderApiSection(data, title, skipFields) {
         </div>`;
 }
 
+async function renderMatchDetail(id, type) {
+    const dataSet = type === 'result' ? resultsData : fixturesData;
+    const match = dataSet.find(m => m.id === id);
+
+    if (!match) {
+        showDetailView(`
+            <div class="text-center py-16 text-gray-500">Match not found.</div>
+            <div class="text-center mt-4">
+                <button onclick="history.back()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">← Back</button>
+            </div>`);
+        return;
+    }
+
+    const attrs = match.attributes;
+    const isResult = type === 'result';
+    const date = new Date(attrs.date);
+    const dateStr = date.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+    const scoreHtml = isResult
+        ? `<div class="flex items-center justify-center gap-4 text-4xl font-bold my-4">
+               <span class="${attrs.home_score > attrs.away_score ? 'text-green-600' : 'text-gray-700'}">${attrs.home_score}</span>
+               <span class="text-gray-400">-</span>
+               <span class="${attrs.away_score > attrs.home_score ? 'text-green-600' : 'text-gray-700'}">${attrs.away_score}</span>
+           </div>`
+        : `<div class="text-center text-2xl font-bold text-gray-400 my-4">vs</div>`;
+
+    const headerHtml = `
+        <button onclick="history.back()" class="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold">
+            ← Back
+        </button>
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 flex-1 justify-end text-right">
+                    <div>
+                        <div class="font-bold text-lg cursor-pointer hover:text-blue-600"
+                             onclick="navigateToTeam(this.dataset.club)" data-club="${escAttr(getClubName(attrs.home_team_name))}">
+                            ${escHtml(attrs.home_team_name)}
+                        </div>
+                    </div>
+                    <img src="${escAttr(attrs.home_logo)}" alt="${escAttr(attrs.home_team_name)}" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
+                </div>
+                <div class="text-center min-w-24">
+                    ${scoreHtml}
+                </div>
+                <div class="flex items-center gap-3 flex-1 justify-start">
+                    <img src="${escAttr(attrs.away_logo)}" alt="${escAttr(attrs.away_team_name)}" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
+                    <div>
+                        <div class="font-bold text-lg cursor-pointer hover:text-blue-600"
+                             onclick="navigateToTeam(this.dataset.club)" data-club="${escAttr(getClubName(attrs.away_team_name))}">
+                            ${escHtml(attrs.away_team_name)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-sm text-gray-500 mt-4 space-y-1">
+                <div>${escHtml(dateStr)} at ${escHtml(timeStr)}</div>
+                <div>${escHtml(attrs.league_name)} · ${escHtml(attrs.full_round || attrs.round)}</div>
+                <div>${escHtml(attrs.ground_name)}${attrs.field_name ? ' · ' + escHtml(attrs.field_name) : ''}</div>
+            </div>
+        </div>
+        <div id="match-api-data">
+            <div class="text-center py-4 text-gray-400 text-sm">Loading additional match data...</div>
+        </div>`;
+
+    showDetailView(headerHtml);
+
+    const endpoint = type === 'result' ? 'results' : 'fixtures';
+    const url = `https://mc-api.dribl.com/api/${endpoint}/${id}?tenant=w8zdBWPmBX&timezone=Australia%2FSydney`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const json = await response.json();
+        const detail = json.data;
+
+        const skipFields = [
+            'home_team_name', 'away_team_name', 'home_score', 'away_score',
+            'date', 'round', 'full_round', 'ground_name', 'field_name',
+            'league_name', 'home_logo', 'away_logo', 'status'
+        ];
+
+        let sections = '';
+        if (detail && detail.attributes) {
+            sections += renderApiSection(detail.attributes, 'Match Details', skipFields);
+        }
+        if (detail && detail.relationships) {
+            sections += renderApiSection(detail.relationships, 'Related Data', []);
+        }
+
+        const apiContainer = document.getElementById('match-api-data');
+        if (apiContainer) {
+            apiContainer.innerHTML = sections || '';
+        }
+    } catch (err) {
+        const apiContainer = document.getElementById('match-api-data');
+        if (apiContainer) apiContainer.innerHTML = '';
+    }
+}
+
 // Populate combined ladder age group toggle buttons
 function populateCombinedLadderFilters() {
     selectedCombinedAgeGroups = new Set(); // reset to "all" on data reload
