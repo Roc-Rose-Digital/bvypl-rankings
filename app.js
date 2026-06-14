@@ -352,7 +352,7 @@ let clubLogoMap = {};  // clubName (suffix-stripped) → logoUrl
 let lastActiveTab = 'combined'; // restored when detail view is dismissed
 
 function escAttr(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function showDetailView(html) {
@@ -402,6 +402,53 @@ function handleHashChange() {
 
     // Unknown hash — clear detail view
     hideDetailView();
+}
+
+function snakeToTitle(key) {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderApiSection(data, title, skipFields) {
+    if (!data || typeof data !== 'object') return '';
+    skipFields = skipFields || [];
+
+    const entries = Object.entries(data).filter(([k]) => !skipFields.includes(k));
+    if (entries.length === 0) return '';
+
+    let rows = '';
+    entries.forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') return;
+
+        let displayValue;
+        if (Array.isArray(value)) {
+            if (value.length === 0) return;
+            if (typeof value[0] === 'object' && value[0] !== null) {
+                displayValue = '<div class="space-y-1">' +
+                    value.map(item => renderApiSection(item, '', [])).join('') +
+                    '</div>';
+            } else {
+                displayValue = value.join(', ');
+            }
+        } else if (typeof value === 'object') {
+            displayValue = renderApiSection(value, '', []);
+        } else {
+            displayValue = String(value);
+        }
+
+        rows += `
+            <div class="flex py-2 border-b border-gray-100 last:border-0">
+                <div class="w-40 flex-shrink-0 text-xs font-semibold text-gray-500 uppercase pt-0.5">${snakeToTitle(key)}</div>
+                <div class="flex-1 text-sm text-gray-800">${displayValue}</div>
+            </div>`;
+    });
+
+    if (!rows) return '';
+
+    return `
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            ${title ? `<h3 class="text-lg font-bold mb-4">${title}</h3>` : ''}
+            <div>${rows}</div>
+        </div>`;
 }
 
 // Populate combined ladder age group toggle buttons
