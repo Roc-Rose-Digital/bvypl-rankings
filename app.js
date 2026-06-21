@@ -511,7 +511,6 @@ function escHtml(s) {
 
 function showDetailView(html) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.querySelector('nav').classList.add('hidden');
     const detail = document.getElementById('detail-view');
     detail.innerHTML = html;
     detail.classList.remove('hidden');
@@ -522,7 +521,6 @@ function hideDetailView() {
     const detail = document.getElementById('detail-view');
     detail.classList.add('hidden');
     detail.innerHTML = '';
-    document.querySelector('nav').classList.remove('hidden');
     showTab(lastActiveTab);
 }
 
