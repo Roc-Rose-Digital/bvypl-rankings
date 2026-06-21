@@ -1139,17 +1139,19 @@ async function populatePlayerSeasonStats(playerId, teamName) {
     if (!el) return;
     el.innerHTML = '<div class="text-center py-2 text-gray-400 text-xs">Loading season stats...</div>';
 
-    // Collect all results for this team across cached divisions
+    // Collect all results for this team across cached divisions, keeping full match context
     const matches = [];
     for (const divData of Object.values(divisionCache)) {
         for (const result of (divData.results || [])) {
             const attrs = result.attributes || {};
+            if (attrs.status !== 'complete') continue;
             const isHome = attrs.home_team_name === teamName;
-            const isAway = attrs.away_team_name === teamName;
-            if ((isHome || isAway) && attrs.match_hash_id) {
-                const teamHashId = isHome ? attrs.home_team_hash_id : attrs.away_team_hash_id;
-                if (teamHashId) matches.push({ matchHashId: attrs.match_hash_id, teamHashId });
-            }
+            const isAway = !isHome && attrs.away_team_name === teamName;
+            if (!isHome && !isAway) continue;
+            if (!attrs.match_hash_id) continue;
+            const teamHashId = isHome ? attrs.home_team_hash_id : attrs.away_team_hash_id;
+            if (!teamHashId) continue;
+            matches.push({ matchHashId: attrs.match_hash_id, teamHashId, resultHashId: result.hash_id, attrs, isHome });
         }
     }
 
@@ -1157,33 +1159,76 @@ async function populatePlayerSeasonStats(playerId, teamName) {
 
     const lineups = await Promise.all(matches.map(m =>
         fetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${m.matchHashId}/team/${m.teamHashId}?tenant=w8zdBWPmBX`)
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null)
+            .then(r => r.ok ? r.json() : null).catch(() => null)
     ));
 
-    let goals = 0, appearances = 0;
-    for (const lineup of lineups) {
+    let totalGoals = 0, totalAppearances = 0;
+    const games = [];
+
+    for (let i = 0; i < matches.length; i++) {
+        const lineup = lineups[i];
         if (!Array.isArray(lineup)) continue;
         const player = lineup.find(p => p.user_hash_id === playerId);
         if (!player) continue;
-        appearances++;
-        if (player.has_goals && player.goals) goals += player.goals.length;
+
+        const m = matches[i];
+        const attrs = m.attrs;
+        totalAppearances++;
+        const matchGoals = (player.has_goals && player.goals) ? player.goals.length : 0;
+        totalGoals += matchGoals;
+
+        const gf = parseInt(m.isHome ? attrs.home_score : attrs.away_score) || 0;
+        const ga = parseInt(m.isHome ? attrs.away_score : attrs.home_score) || 0;
+        const outcome = gf > ga ? 'W' : gf < ga ? 'L' : 'D';
+        const outcomeColor = outcome === 'W' ? 'bg-green-500 text-white' : outcome === 'L' ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-700';
+        const opponent = m.isHome ? attrs.away_team_name : attrs.home_team_name;
+        const opponentLogo = m.isHome ? (attrs.away_logo || '') : (attrs.home_logo || '');
+        const date = new Date(attrs.date);
+        const dateStr = date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+
+        const cardHtml = (player.has_cards && player.cards)
+            ? player.cards.map(c => {
+                const ct = (c.final_card_type || c.first_card_type || c.type || c.card_type || '').toLowerCase();
+                return ct.includes('red') && !ct.includes('yellow')
+                    ? '<span class="inline-block w-2.5 h-3.5 bg-red-600 rounded-sm"></span>'
+                    : '<span class="inline-block w-2.5 h-3.5 bg-yellow-400 rounded-sm"></span>';
+              }).join('')
+            : '';
+        const goalHtml = matchGoals ? `<span class="text-sm">${'⚽'.repeat(Math.min(matchGoals, 3))}${matchGoals > 3 ? `<span class="text-xs text-gray-500">×${matchGoals}</span>` : ''}</span>` : '';
+
+        games.push({ date, dateStr, outcome, outcomeColor, opponent, opponentLogo, gf, ga, goalHtml, cardHtml, resultHashId: m.resultHashId });
     }
 
+    games.sort((a, b) => b.date - a.date);
+
     if (!el.isConnected) return;
+
+    const gamesHtml = games.map(g => `
+        <div class="stripe-row flex items-center gap-2 sm:gap-3 py-2 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
+             data-id="${escAttr(g.resultHashId)}" onclick="navigateToMatch(this.dataset.id, 'result')">
+            <span class="text-xs text-gray-400 w-14 flex-shrink-0">${escHtml(g.dateStr)}</span>
+            <span class="text-xs font-semibold px-1.5 py-0.5 rounded ${g.outcomeColor} flex-shrink-0 w-6 text-center">${g.outcome}</span>
+            <img src="${escAttr(g.opponentLogo)}" class="w-5 h-5 object-contain flex-shrink-0" onerror="this.style.display='none'">
+            <span class="flex-1 text-sm min-w-0 truncate">${escHtml(g.opponent)}</span>
+            <span class="text-xs font-semibold text-gray-600 flex-shrink-0">${g.gf}–${g.ga}</span>
+            <div class="flex items-center gap-1 w-12 justify-end flex-shrink-0">${g.goalHtml}${g.cardHtml}</div>
+        </div>`).join('');
+
     el.innerHTML = `
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
             <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Season Stats</div>
-            <div class="flex gap-8 text-sm">
+            <div class="flex gap-8 mb-6">
                 <div class="text-center">
-                    <div class="text-2xl font-bold">${appearances}</div>
+                    <div class="text-2xl font-bold">${totalAppearances}</div>
                     <div class="text-gray-500 text-xs mt-1">Appearances</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-2xl font-bold">${goals}</div>
+                    <div class="text-2xl font-bold">${totalGoals}</div>
                     <div class="text-gray-500 text-xs mt-1">Goals</div>
                 </div>
             </div>
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Games</div>
+            <div>${gamesHtml}</div>
         </div>`;
 }
 
