@@ -6,30 +6,58 @@ let roundsData = [];
 let currentGender = 'boys'; // kept for compatibility but unused
 let currentDivision = 'bgdMX6MDKE'; // Default to Boys YPL1
 
-// Division configuration (flat — gender included in fullName)
-const divisions = {
-    boys: {
-        'bgdMX6MDKE': { name: 'Boys YPL1', fullName: 'Boys Victorian Youth Premier League 1', combined: true },
-        'Bjma0zXAdR': { name: 'Boys YPL2', fullName: 'Boys Victorian Youth Premier League 2', combined: true },
-        'AnmYznkyNz': { name: 'Boys BVYSL NW', fullName: 'Boys Victorian Youth State League North-West', combined: false },
-        '2PmjO2pANZ': { name: 'Boys BVYSL SE', fullName: 'Boys Victorian Youth State League South-East', combined: false },
-        '3pmvQvbDdv': { name: 'Girls YPL', fullName: 'Girls Victorian Youth Premier League', combined: true },
-        'vbd918ywd4': { name: 'Saturday Mixed', fullName: 'Saturday Mixed', combined: false },
-        'nPmrBVjAmo': { name: 'Sunday Mixed', fullName: 'Sunday Mixed', combined: false },
-        'Rxm8RpZLKr': { name: 'MiniRoos Sat', fullName: 'MiniRoos Saturday', combined: false, fixturesOnly: true },
-        'gld4pXoDdW': { name: 'MiniRoos Sun', fullName: 'MiniRoos Sunday', combined: false, fixturesOnly: true },
-        'jJmXQb5WNn': { name: 'MiniRoos Girls Sun', fullName: 'MiniRoos Girls Sunday', combined: false, fixturesOnly: true },
-        'Bjma0p6VdR': { name: 'Junior Girls Sun', fullName: 'Junior Girls Sunday', combined: false },
-        'XWdg6GGZKR': { name: 'Girls CPL', fullName: 'Girls Community Premier League', combined: false },
-        'gld4pXExdW': { name: 'Junior Boys Sun', fullName: 'Junior Boys Sunday', combined: false },
-        'A4KLxy81Kq': { name: "Women's State League", fullName: "Women's State League", combined: false },
-        '1pN6pRypd0': { name: 'NPL Men', fullName: 'NPL Victoria Men', combined: false },
-        'k2KpR0XbmY': { name: 'NPL Women', fullName: 'NPL Victoria Women', combined: false },
-        'LBdDxbvJdb': { name: 'VPL Men 1', fullName: 'VPL Men 1', combined: false },
-        'vbd91pPYd4': { name: 'VPL Men 2', fullName: 'VPL Men 2', combined: false },
-        'R1K3BpA9NQ': { name: 'VPL Women', fullName: 'VPL Women', combined: false },
-        'wOmejBq1N0': { name: "Men's State League", fullName: "Men's State League", combined: false }
+// Division configuration grouped by tier for dropdown rendering
+const divisionGroups = [
+    {
+        label: 'Elite',
+        divisions: {
+            '1pN6pRypd0': { name: 'NPL Men',     fullName: 'NPL Men',     combined: false },
+            'k2KpR0XbmY': { name: 'NPL Women',   fullName: 'NPL Women',   combined: false },
+            'LBdDxbvJdb': { name: 'VPL Men 1',   fullName: 'VPL Men 1',   combined: false },
+            'vbd91pPYd4': { name: 'VPL Men 2',   fullName: 'VPL Men 2',   combined: false },
+            'R1K3BpA9NQ': { name: 'VPL Women',   fullName: 'VPL Women',   combined: false },
+        }
     },
+    {
+        label: 'State League',
+        divisions: {
+            'wOmejBq1N0': { name: "Men's State League",   fullName: "Men's State League",   combined: false },
+            'A4KLxy81Kq': { name: "Women's State League", fullName: "Women's State League", combined: false },
+        }
+    },
+    {
+        label: 'Youth Premier',
+        divisions: {
+            'bgdMX6MDKE': { name: 'Boys YPL 1',    fullName: 'Boys YPL 1',    combined: true },
+            'Bjma0zXAdR': { name: 'Boys YPL 2',    fullName: 'Boys YPL 2',    combined: true },
+            'AnmYznkyNz': { name: 'Boys State NW', fullName: 'Boys State NW', combined: false },
+            '2PmjO2pANZ': { name: 'Boys State SE', fullName: 'Boys State SE', combined: false },
+            '3pmvQvbDdv': { name: 'Girls YPL',     fullName: 'Girls YPL',     combined: true },
+            'XWdg6GGZKR': { name: 'Girls CPL',     fullName: 'Girls CPL',     combined: false },
+        }
+    },
+    {
+        label: 'Community',
+        divisions: {
+            'gld4pXExdW': { name: 'Junior Boys Sunday', fullName: 'Junior Boys Sunday', combined: false },
+            'Bjma0p6VdR': { name: 'Junior Girls Sunday', fullName: 'Junior Girls Sunday', combined: false },
+            'vbd918ywd4': { name: 'Mixed Saturday',      fullName: 'Mixed Saturday',      combined: false },
+            'nPmrBVjAmo': { name: 'Mixed Sunday',        fullName: 'Mixed Sunday',        combined: false },
+        }
+    },
+    {
+        label: 'MiniRoos',
+        divisions: {
+            'Rxm8RpZLKr': { name: 'MiniRoos Saturday',    fullName: 'MiniRoos Saturday',    combined: false, fixturesOnly: true },
+            'gld4pXoDdW': { name: 'MiniRoos Sunday',      fullName: 'MiniRoos Sunday',      combined: false, fixturesOnly: true },
+            'jJmXQb5WNn': { name: 'MiniRoos Girls Sunday', fullName: 'MiniRoos Girls Sunday', combined: false, fixturesOnly: true },
+        }
+    },
+];
+
+// Flat map for lookups by division ID
+const divisions = {
+    boys: Object.fromEntries(divisionGroups.flatMap(g => Object.entries(g.divisions))),
     girls: {}
 };
 
@@ -215,12 +243,15 @@ function updateLadderDescription(gender) {
 // Populate division dropdown
 function populateDivisionDropdown() {
     const divisionSelector = document.getElementById('division-selector');
-    const allDivisions = divisions.boys;
-    let options = '';
-    Object.keys(allDivisions).forEach(id => {
-        options += `<option value="${id}">${escHtml(allDivisions[id].fullName)}</option>`;
+    let html = '';
+    divisionGroups.forEach(group => {
+        html += `<optgroup label="${escAttr(group.label)}">`;
+        Object.entries(group.divisions).forEach(([id, d]) => {
+            html += `<option value="${escAttr(id)}">${escHtml(d.fullName)}</option>`;
+        });
+        html += `</optgroup>`;
     });
-    divisionSelector.innerHTML = options;
+    divisionSelector.innerHTML = html;
 }
 
 // Refresh data for current division
