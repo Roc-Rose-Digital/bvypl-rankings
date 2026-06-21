@@ -16,7 +16,7 @@ const divisions = {
         '3pmvQvbDdv': { name: 'Girls YPL', fullName: 'Girls Victorian Youth Premier League', combined: true },
         'vbd918ywd4': { name: 'Saturday Mixed', fullName: 'Saturday Mixed', combined: false },
         'nPmrBVjAmo': { name: 'Sunday Mixed', fullName: 'Sunday Mixed', combined: false },
-        'Rxm8RpZLKr': { name: 'MiniRoos', fullName: 'MiniRoos', combined: false },
+        'Rxm8RpZLKr': { name: 'MiniRoos', fullName: 'MiniRoos', combined: false, fixturesOnly: true },
         'wOmejBq1N0': { name: "Men's State League", fullName: "Men's State League", combined: false }
     },
     girls: {}
@@ -273,9 +273,14 @@ function initializeApp() {
 
 // Tab switching
 function updateCombinedTabVisibility() {
-    const hasCombined = divisions.boys[currentDivision]?.combined !== false;
-    const combinedTab = document.getElementById('tab-combined');
-    if (combinedTab) combinedTab.classList.toggle('hidden', !hasCombined);
+    const divConfig = divisions.boys[currentDivision] || {};
+    const hasCombined = divConfig.combined !== false;
+    const fixturesOnly = !!divConfig.fixturesOnly;
+
+    document.getElementById('tab-combined')?.classList.toggle('hidden', !hasCombined || fixturesOnly);
+    document.getElementById('tab-ladders')?.classList.toggle('hidden', fixturesOnly);
+    document.getElementById('tab-results')?.classList.toggle('hidden', fixturesOnly);
+    document.getElementById('tab-stats')?.classList.toggle('hidden', fixturesOnly);
 
     const groupLabel = hasCombined ? 'Age Group' : 'League';
     const laddersTab = document.getElementById('tab-ladders');
@@ -286,7 +291,7 @@ function updateCombinedTabVisibility() {
         el.textContent = groupLabel;
     });
 
-    showTab(hasCombined ? 'combined' : 'ladders');
+    showTab(fixturesOnly ? 'fixtures' : hasCombined ? 'combined' : 'ladders');
 }
 
 function showTab(tabName) {
