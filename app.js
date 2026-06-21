@@ -527,6 +527,7 @@ function hideDetailView() {
 }
 
 function showMatchTab(name) {
+    sessionStorage.setItem('lastMatchTab', name);
     ['summary', 'home', 'away'].forEach(t => {
         const panel = document.getElementById('match-panel-' + t);
         const btn = document.getElementById('match-tab-' + t);
@@ -747,6 +748,12 @@ function renderMatchCentre(data) {
 }
 
 function navigateToPlayer(id) {
+    // Capture whichever lineup tab is currently visible so Back restores it
+    const active = ['home', 'away', 'summary'].find(t => {
+        const p = document.getElementById('match-panel-' + t);
+        return p && !p.classList.contains('hidden');
+    });
+    if (active) sessionStorage.setItem('lastMatchTab', active);
     window.location.hash = 'player/' + id;
 }
 
@@ -921,6 +928,12 @@ async function renderMatchDetail(id, type) {
     if (summaryEl) summaryEl.innerHTML = (centreResult && centreResult.data) ? renderMatchCentre(centreResult.data) : '<div class="text-center py-4 text-gray-400 text-sm">No match centre data available.</div>';
     if (homeEl) homeEl.innerHTML = homeResult ? renderLineup(homeResult, attrs.home_team_name, attrs.home_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
     if (awayEl) awayEl.innerHTML = awayResult ? renderLineup(awayResult, attrs.away_team_name, attrs.away_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
+
+    const savedTab = sessionStorage.getItem('lastMatchTab');
+    if (savedTab && savedTab !== 'summary') {
+        showMatchTab(savedTab);
+        sessionStorage.removeItem('lastMatchTab');
+    }
 }
 
 async function renderTeamDetail(clubName) {
