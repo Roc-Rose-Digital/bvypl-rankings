@@ -1031,6 +1031,18 @@ async function renderTeamDetail(clubName) {
             </div>
         </div>
 
+        <div id="team-stats-section">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="text-center py-4 text-gray-400 text-sm">Loading team stats...</div>
+            </div>
+        </div>
+
+        <div id="team-squad-section">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="text-center py-4 text-gray-400 text-sm">Loading squad...</div>
+            </div>
+        </div>
+
         <div id="team-results-section">
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                 <div class="text-center py-4 text-gray-400 text-sm">Loading results...</div>
@@ -1339,6 +1351,175 @@ async function populateTeamBreakdown(clubName) {
                </div>`
             : '';
         if (fixtureLeagues.length > 1) filterTeamTab('fixtures', fixtureLeagues[0]);
+    }
+
+    populateSquadAndStats(clubName);
+}
+
+async function populateSquadAndStats(clubName) {
+    const isStaffRole = (p) => {
+        const r = (p.role_slug || '').toLowerCase();
+        return r.includes('coach') || r.includes('manager') || r.includes('staff') ||
+               r.includes('physio') || r.includes('trainer') || r.includes('doctor');
+    };
+
+    // Collect all results for each team of this club
+    const teamMatches = {}; // fullTeamName → [{ matchHashId, teamHashId, isHome, attrs }]
+    for (const divData of Object.values(divisionCache)) {
+        for (const result of (divData.results || [])) {
+            const attrs = result.attributes || {};
+            const isHome = getClubName(attrs.home_team_name) === clubName;
+            const isAway = !isHome && getClubName(attrs.away_team_name) === clubName;
+            if (!isHome && !isAway) continue;
+            if (!attrs.match_hash_id) continue;
+            const teamName = isHome ? attrs.home_team_name : attrs.away_team_name;
+            const teamHashId = isHome ? attrs.home_team_hash_id : attrs.away_team_hash_id;
+            if (!teamHashId) continue;
+            if (!teamMatches[teamName]) teamMatches[teamName] = [];
+            teamMatches[teamName].push({ matchHashId: attrs.match_hash_id, teamHashId, isHome, attrs });
+        }
+    }
+
+    const teamNames = Object.keys(teamMatches);
+    if (!teamNames.length) {
+        ['team-stats-section', 'team-squad-section'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+        return;
+    }
+
+    // Fetch all lineups per team in parallel
+    const teamLineups = {};
+    await Promise.all(teamNames.map(async (teamName) => {
+        const lineups = await Promise.all(teamMatches[teamName].map(m =>
+            fetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${m.matchHashId}/team/${m.teamHashId}?tenant=w8zdBWPmBX`)
+                .then(r => r.ok ? r.json() : null).catch(() => null)
+        ));
+        teamLineups[teamName] = lineups.filter(Boolean);
+    }));
+
+    // Aggregate per team
+    const teamData = {};
+    for (const teamName of teamNames) {
+        const lineups = teamLineups[teamName] || [];
+        const players = {};
+        let yellows = 0, reds = 0;
+
+        for (const lineup of lineups) {
+            if (!Array.isArray(lineup)) continue;
+            for (const p of lineup) {
+                if (!p.user_hash_id || isStaffRole(p)) continue;
+                const pid = p.user_hash_id;
+                if (!players[pid]) players[pid] = { pid, name: `${p.first_name} ${p.last_name}`, image: p.image || '', goals: 0, yellows: 0, reds: 0, appearances: 0 };
+                players[pid].appearances++;
+                if (p.has_goals && p.goals) players[pid].goals += p.goals.length;
+                if (p.has_cards && p.cards) {
+                    for (const c of p.cards) {
+                        const ct = (c.final_card_type || c.first_card_type || c.type || c.card_type || '').toLowerCase();
+                        if (ct.includes('red') && !ct.includes('yellow')) { players[pid].reds++; reds++; }
+                        else { players[pid].yellows++; yellows++; }
+                    }
+                }
+            }
+        }
+
+        // Goals/conceded/clean sheets from results
+        let goalsFor = 0, goalsAgainst = 0, cleanSheets = 0;
+        for (const m of teamMatches[teamName]) {
+            const gf = parseInt(m.isHome ? m.attrs.home_score : m.attrs.away_score) || 0;
+            const ga = parseInt(m.isHome ? m.attrs.away_score : m.attrs.home_score) || 0;
+            goalsFor += gf; goalsAgainst += ga;
+            if (ga === 0) cleanSheets++;
+        }
+
+        teamData[teamName] = {
+            players: Object.values(players).sort((a, b) => b.appearances - a.appearances),
+            goalsFor, goalsAgainst, cleanSheets, yellows, reds,
+            gamesPlayed: teamMatches[teamName].length
+        };
+    }
+
+    const isSingle = teamNames.length === 1;
+    const sortedTeams = teamNames.sort((a, b) => {
+        const ka = leagueSortKey(a), kb = leagueSortKey(b);
+        return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2]);
+    });
+
+    // Render Team Stats
+    const statsEl = document.getElementById('team-stats-section');
+    if (statsEl) {
+        let html = '<div class="bg-white rounded-lg shadow-md p-6 mb-6"><h3 class="text-lg font-bold mb-4">Team Stats</h3>';
+        for (const teamName of sortedTeams) {
+            const d = teamData[teamName];
+            if (!isSingle) html += `<div class="text-sm font-semibold text-gray-500 mb-2 mt-4">${escHtml(teamName)}</div>`;
+            html += `<div class="flex flex-wrap gap-6 text-center mb-4">
+                <div><div class="text-2xl font-bold">${d.gamesPlayed}</div><div class="text-xs text-gray-500 mt-1">Played</div></div>
+                <div><div class="text-2xl font-bold text-green-600">${d.goalsFor}</div><div class="text-xs text-gray-500 mt-1">Goals For</div></div>
+                <div><div class="text-2xl font-bold text-red-500">${d.goalsAgainst}</div><div class="text-xs text-gray-500 mt-1">Goals Against</div></div>
+                <div><div class="text-2xl font-bold">${d.cleanSheets}</div><div class="text-xs text-gray-500 mt-1">Clean Sheets</div></div>
+                <div><div class="text-2xl font-bold flex justify-center gap-1 items-center"><span class="inline-block w-4 h-5 bg-yellow-400 rounded-sm"></span>${d.yellows}</div><div class="text-xs text-gray-500 mt-1">Yellow Cards</div></div>
+                <div><div class="text-2xl font-bold flex justify-center gap-1 items-center"><span class="inline-block w-4 h-5 bg-red-600 rounded-sm"></span>${d.reds}</div><div class="text-xs text-gray-500 mt-1">Red Cards</div></div>
+            </div>`;
+        }
+        html += '</div>';
+        statsEl.innerHTML = html;
+    }
+
+    // Render Squad + Top Scorers
+    const squadEl = document.getElementById('team-squad-section');
+    if (squadEl) {
+        let html = '';
+        for (const teamName of sortedTeams) {
+            const d = teamData[teamName];
+            if (!d.players.length) continue;
+            const topScorers = [...d.players].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
+            const sectionHeader = isSingle ? '' : `<h4 class="text-base font-semibold text-gray-700 mb-3">${escHtml(teamName)}</h4>`;
+
+            // Top scorers
+            const scorersHtml = topScorers.length ? `
+                <div class="mb-6">
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Top Scorers</div>
+                    ${topScorers.map((p, i) => `
+                        <div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                            <span class="text-xs text-gray-400 w-5 text-right flex-shrink-0">${i + 1}</span>
+                            ${p.image ? `<img src="${escAttr(p.image)}" class="w-7 h-7 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0"></div>'}
+                            <span class="flex-1 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</span>
+                            <span class="text-sm">${'⚽'.repeat(Math.min(p.goals, 5))}${p.goals > 5 ? `<span class="text-xs text-gray-500"> ×${p.goals}</span>` : ''}</span>
+                        </div>`).join('')}
+                </div>` : '';
+
+            // Squad table
+            const squadRows = d.players.map(p => `
+                <tr class="stripe-row border-b border-gray-100 last:border-0">
+                    <td class="py-2 pr-2">
+                        ${p.image ? `<img src="${escAttr(p.image)}" class="w-7 h-7 rounded-full object-cover bg-gray-100" onerror="this.style.display='none'">` : '<div class="w-7 h-7 rounded-full bg-gray-100"></div>'}
+                    </td>
+                    <td class="py-2 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</td>
+                    <td class="py-2 text-center text-sm text-gray-600">${p.appearances}</td>
+                    <td class="py-2 text-center text-sm">${p.goals ? '⚽'.repeat(Math.min(p.goals, 3)) + (p.goals > 3 ? `<span class="text-xs text-gray-500">×${p.goals}</span>` : '') : ''}</td>
+                    <td class="py-2 text-center text-sm">
+                        ${p.yellows ? `<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>${p.yellows > 1 ? `<span class="text-xs text-gray-500"> ×${p.yellows}</span>` : ''}` : ''}
+                        ${p.reds ? `<span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle ml-1"></span>${p.reds > 1 ? `<span class="text-xs text-gray-500"> ×${p.reds}</span>` : ''}` : ''}
+                    </td>
+                </tr>`).join('');
+
+            html += `<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                ${sectionHeader}
+                ${scorersHtml}
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Squad</div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead><tr class="border-b border-gray-200">
+                            <th class="pb-2 w-8"></th>
+                            <th class="pb-2 text-left text-xs font-semibold text-gray-500">Player</th>
+                            <th class="pb-2 text-center text-xs font-semibold text-gray-500 w-12">Apps</th>
+                            <th class="pb-2 text-center text-xs font-semibold text-gray-500 w-16">Goals</th>
+                            <th class="pb-2 text-center text-xs font-semibold text-gray-500 w-16">Cards</th>
+                        </tr></thead>
+                        <tbody>${squadRows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+        squadEl.innerHTML = html || '';
     }
 }
 
