@@ -779,7 +779,7 @@ function renderLineup(players, teamName, teamLogo) {
               }).join('')
             : '';
         const goalHtml = p.has_goals && p.goals && p.goals.length
-            ? `<span class="text-xs text-gray-500">${p.goals.length > 1 ? p.goals.length + 'G' : 'G'}</span>`
+            ? `<span class="text-sm leading-none">${'⚽'.repeat(Math.min(p.goals.length, 3))}${p.goals.length > 3 ? `<span class="text-xs text-gray-500">×${p.goals.length}</span>` : ''}</span>`
             : '';
         const capHtml = p.is_captain ? '<span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-1">C</span>' : '';
         const nameEl = pid
