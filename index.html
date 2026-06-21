@@ -76,6 +76,9 @@
                     <button onclick="showTab('results')" id="tab-results" class="py-4 px-3 sm:px-4 whitespace-nowrap hover:text-blue-600 text-sm sm:text-base">
                         Results
                     </button>
+                    <button onclick="showTab('stats')" id="tab-stats" class="py-4 px-3 sm:px-4 whitespace-nowrap hover:text-blue-600 text-sm sm:text-base">
+                        Stats
+                    </button>
                 </div>
             </div>
         </nav>
@@ -148,6 +151,18 @@
                 <div id="fixtures-list">
                     <div class="text-center py-8 text-gray-500">Loading fixtures...</div>
                 </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div id="content-stats" class="tab-content hidden">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-4">League Stats</h2>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2 stats-group-label">League</label>
+                        <div id="stats-age-group-filters" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <div id="stats-content"></div>
             </div>
 
             <!-- Results Tab -->
