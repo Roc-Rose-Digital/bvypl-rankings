@@ -367,6 +367,7 @@ let selectedCombinedAgeGroups = new Set(); // empty = all selected
 
 let teamIdMap = {};    // fullTeamName → teamId
 let clubLogoMap = {};  // clubName (suffix-stripped) → logoUrl
+const playerCache = {}; // hash_id → { player fields + teamName, teamLogo }
 
 let cascadeAge = '';
 let cascadeRegion = '';
@@ -582,6 +583,12 @@ function handleHashChange() {
         return;
     }
 
+    const playerDetail = hash.match(/^player\/(.+)$/);
+    if (playerDetail) {
+        renderPlayerDetail(playerDetail[1]);
+        return;
+    }
+
     // Unknown hash — clear detail view
     hideDetailView();
 }
@@ -739,7 +746,11 @@ function renderMatchCentre(data) {
     return html;
 }
 
-function renderLineup(players, teamName) {
+function navigateToPlayer(id) {
+    window.location.hash = 'player/' + id;
+}
+
+function renderLineup(players, teamName, teamLogo) {
     if (!Array.isArray(players) || !players.length) return '';
 
     const starters = players.filter(p => p.starting).sort((a, b) => (parseInt(a.jersey) || 99) - (parseInt(b.jersey) || 99));
@@ -748,6 +759,7 @@ function renderLineup(players, teamName) {
     if (!starters.length && !bench.length) return '';
 
     const renderPlayer = (p) => {
+        if (p.hash_id) playerCache[p.hash_id] = { ...p, teamName, teamLogo: teamLogo || '' };
         const name = escHtml(`${p.first_name} ${p.last_name}`);
         const pos = p.is_goalkeeper ? 'GK' : (p.field_role || '');
         const cardHtml = p.has_cards
@@ -761,11 +773,14 @@ function renderLineup(players, teamName) {
             ? `<span class="text-xs text-gray-500">${p.goals.length > 1 ? p.goals.length + 'G' : 'G'}</span>`
             : '';
         const capHtml = p.is_captain ? '<span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-1">C</span>' : '';
+        const nameEl = p.hash_id
+            ? `<span class="flex-1 text-sm font-medium text-blue-700 cursor-pointer hover:underline" data-id="${escAttr(p.hash_id)}" onclick="navigateToPlayer(this.dataset.id)">${name}</span>`
+            : `<span class="flex-1 text-sm font-medium">${name}</span>`;
 
         return `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
             <img src="${escAttr(p.image || '')}" class="w-8 h-8 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">
             <span class="text-xs text-gray-400 w-8 flex-shrink-0 text-right">${p.jersey ? escHtml(String(p.jersey)) : ''}</span>
-            <span class="flex-1 text-sm font-medium">${name}</span>
+            ${nameEl}
             ${pos ? `<span class="text-xs text-gray-400">${escHtml(pos)}</span>` : ''}
             <div class="flex items-center gap-1">${capHtml}${goalHtml}${cardHtml}</div>
         </div>`;
@@ -875,8 +890,8 @@ async function renderMatchDetail(id, type) {
     const awayEl = document.getElementById('match-panel-away');
 
     if (summaryEl) summaryEl.innerHTML = (centreResult && centreResult.data) ? renderMatchCentre(centreResult.data) : '<div class="text-center py-4 text-gray-400 text-sm">No match centre data available.</div>';
-    if (homeEl) homeEl.innerHTML = homeResult ? renderLineup(homeResult, attrs.home_team_name) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
-    if (awayEl) awayEl.innerHTML = awayResult ? renderLineup(awayResult, attrs.away_team_name) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
+    if (homeEl) homeEl.innerHTML = homeResult ? renderLineup(homeResult, attrs.home_team_name, attrs.home_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
+    if (awayEl) awayEl.innerHTML = awayResult ? renderLineup(awayResult, attrs.away_team_name, attrs.away_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
 }
 
 async function renderTeamDetail(clubName) {
@@ -997,6 +1012,53 @@ function leagueSortKey(name) {
     if (stateMatch) return [1000 + parseInt(stateMatch[1]), name.includes('Reserves') ? 1 : 0, name];
     const ageMatch = name.match(/U(\d+)/i);
     return [ageMatch ? parseInt(ageMatch[1]) : 999, 0, name];
+}
+
+async function renderPlayerDetail(playerId) {
+    const cached = playerCache[playerId] || {};
+    const fullName = cached.first_name ? `${cached.first_name} ${cached.last_name}` : 'Player';
+    const pos = cached.is_goalkeeper ? 'GK' : (cached.field_role || cached.position || '');
+
+    showDetailView(`
+        <div class="max-w-2xl mx-auto">
+            <button onclick="history.back()" class="mb-4 text-blue-600 hover:underline text-sm">&larr; Back</button>
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex items-center gap-4 mb-4">
+                    ${cached.image ? `<img src="${escAttr(cached.image)}" class="w-16 h-16 rounded-full object-cover bg-gray-100">` : ''}
+                    <div>
+                        <h2 class="text-2xl font-bold">${escHtml(fullName)}</h2>
+                        ${cached.teamName ? `<div class="text-gray-500 text-sm mt-1 flex items-center gap-2">
+                            ${cached.teamLogo ? `<img src="${escAttr(cached.teamLogo)}" class="w-5 h-5 object-contain">` : ''}
+                            <span>${escHtml(cached.teamName)}</span>
+                        </div>` : ''}
+                    </div>
+                </div>
+                <div class="flex gap-6 text-sm">
+                    ${pos ? `<div><span class="text-gray-500">Position</span><div class="font-semibold">${escHtml(pos)}</div></div>` : ''}
+                    ${cached.jersey ? `<div><span class="text-gray-500">Jersey</span><div class="font-semibold">#${escHtml(String(cached.jersey))}</div></div>` : ''}
+                    ${cached.is_captain ? `<div><span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-2 py-1">Captain</span></div>` : ''}
+                </div>
+            </div>
+            <div id="player-api-section">
+                <div class="text-center py-4 text-gray-400 text-sm">Loading player profile...</div>
+            </div>
+        </div>
+    `);
+
+    try {
+        const resp = await fetch(`https://mc-api.dribl.com/api/players/${encodeURIComponent(playerId)}?tenant=w8zdBWPmBX&timezone=Australia/Sydney`);
+        const data = resp.ok ? await resp.json() : null;
+        const el = document.getElementById('player-api-section');
+        if (!el) return;
+        if (!data) { el.innerHTML = ''; return; }
+        const attrs = data.data?.attributes || data.attributes || data.data || data;
+        if (!attrs || typeof attrs !== 'object' || !Object.keys(attrs).length) { el.innerHTML = ''; return; }
+        const skipFields = ['hash_id', 'id', 'image', 'photo', 'avatar', 'thumbnail', 'first_name', 'last_name', 'name'];
+        el.innerHTML = renderApiSection(attrs, 'Player Profile', skipFields);
+    } catch (e) {
+        const el = document.getElementById('player-api-section');
+        if (el) el.innerHTML = '';
+    }
 }
 
 async function populateTeamBreakdown(clubName) {
