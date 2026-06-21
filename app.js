@@ -19,6 +19,8 @@ const divisions = {
         'Rxm8RpZLKr': { name: 'MiniRoos Sat', fullName: 'MiniRoos Saturday', combined: false, fixturesOnly: true },
         'gld4pXoDdW': { name: 'MiniRoos Sun', fullName: 'MiniRoos Sunday', combined: false, fixturesOnly: true },
         'jJmXQb5WNn': { name: 'MiniRoos Girls Sun', fullName: 'MiniRoos Girls Sunday', combined: false, fixturesOnly: true },
+        'Bjma0p6VdR': { name: 'Junior Girls Sun', fullName: 'Junior Girls Sunday', combined: false },
+        'XWdg6GGZKR': { name: 'Girls CPL', fullName: 'Girls Community Premier League', combined: false },
         '1pN6pRypd0': { name: 'NPL Men', fullName: 'NPL Victoria Men', combined: false },
         'k2KpR0XbmY': { name: 'NPL Women', fullName: 'NPL Victoria Women', combined: false },
         'LBdDxbvJdb': { name: 'VPL Men 1', fullName: 'VPL Men 1', combined: false },
@@ -414,6 +416,10 @@ function parseLeagueName(name) {
         return null;
     }
 
+    // CPL Girls: "CPL Girls U{age} {Region}"
+    const cplMatch = name.match(/^CPL Girls U(\d+)\s+(.+)$/);
+    if (cplMatch) return { age: cplMatch[1], region: cplMatch[2].trim(), grade: null, type: null };
+
     // Men's State League: "State League N Men's - Region[ Reserves]"
     const stateMatch = name.match(/State League (\d+)\s+Men's\s*-\s*(.+)/i);
     if (stateMatch) {
@@ -427,7 +433,7 @@ function parseLeagueName(name) {
     }
 
     // Community leagues
-    let n = name.replace(/^\([^)]*\)\s*/, '').replace(/^Mixed\s+/i, '').replace(/^(Saturday|Sunday)\s+/i, '');
+    let n = name.replace(/^\([^)]*\)\s*/, '').replace(/^(?:Mixed\s+)?(?:Saturday|Sunday|Girls')\s+/i, '');
     const regions = ['North-West', 'North-East', 'South-East', 'South-West', 'North', 'South', 'East', 'West'];
     let region = null;
     for (const r of regions) {
