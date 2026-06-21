@@ -1838,7 +1838,7 @@ function renderLeagueStatsResult(players) {
     const el = document.getElementById('stats-content');
     if (!el) return;
 
-    const playerRow = (p, stat, display) => `
+    const playerRow = (p, display) => `
         <div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
             ${p.image ? `<img src="${escAttr(p.image)}" class="w-8 h-8 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0"></div>'}
             <div class="flex-1 min-w-0">
@@ -1848,30 +1848,56 @@ function renderLeagueStatsResult(players) {
             <div class="text-right flex-shrink-0">${display}</div>
         </div>`;
 
-    const card = (title, rows) => `
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-lg font-bold mb-4">${title}</h3>
-            ${rows || '<div class="text-gray-400 text-sm text-center py-4">No data</div>'}
-        </div>`;
-
     const topScorers = [...players].filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 20);
     const topApps = [...players].sort((a, b) => b.appearances - a.appearances).slice(0, 20);
     const topCards = [...players].filter(p => p.yellows + p.reds > 0).sort((a, b) => (b.yellows + b.reds * 2) - (a.yellows + a.reds * 2)).slice(0, 20);
 
-    el.innerHTML = [
-        card('Top Scorers', topScorers.map((p, i) => playerRow(p, p.goals,
+    const panels = [
+        { key: 'scorers', label: 'Top Scorers', rows: topScorers.map(p => playerRow(p,
             `<div class="flex items-center gap-1">${'⚽'.repeat(Math.min(p.goals, 5))}${p.goals > 5 ? `<span class="text-xs text-gray-500 ml-1">×${p.goals}</span>` : ''}</div>`
-        )).join('')),
-        card('Most Appearances', topApps.map((p, i) => playerRow(p, p.appearances,
+        )).join('') },
+        { key: 'appearances', label: 'Appearances', rows: topApps.map(p => playerRow(p,
             `<span class="text-sm font-bold text-blue-700">${p.appearances}</span>`
-        )).join('')),
-        card('Most Cards', topCards.map((p, i) => playerRow(p, p.yellows + p.reds,
+        )).join('') },
+        { key: 'cards', label: 'Cards', rows: topCards.map(p => playerRow(p,
             `<div class="flex items-center gap-2">
                 ${p.yellows ? `<span class="flex items-center gap-1"><span class="inline-block w-3.5 h-5 bg-yellow-400 rounded-sm"></span><span class="text-sm font-medium">${p.yellows}</span></span>` : ''}
                 ${p.reds ? `<span class="flex items-center gap-1"><span class="inline-block w-3.5 h-5 bg-red-600 rounded-sm"></span><span class="text-sm font-medium">${p.reds}</span></span>` : ''}
             </div>`
-        )).join('')),
-    ].join('');
+        )).join('') },
+    ];
+
+    const tabBtns = panels.map((t, i) =>
+        `<button id="stats-stab-btn-${t.key}" onclick="showStatsSubTab('${t.key}')"
+            class="px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${i === 0 ? 'tab-active border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-blue-600'}"
+        >${t.label}</button>`
+    ).join('');
+
+    const tabPanels = panels.map((t, i) =>
+        `<div id="stats-stab-panel-${t.key}" ${i > 0 ? 'class="hidden"' : ''}>
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                ${t.rows || '<div class="text-gray-400 text-sm text-center py-4">No data</div>'}
+            </div>
+        </div>`
+    ).join('');
+
+    el.innerHTML = `
+        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+            <div class="flex overflow-x-auto border-b border-gray-200 px-2">${tabBtns}</div>
+        </div>
+        ${tabPanels}`;
+}
+
+function showStatsSubTab(key) {
+    document.querySelectorAll('[id^="stats-stab-panel-"]').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('[id^="stats-stab-btn-"]').forEach(btn => {
+        btn.classList.remove('tab-active', 'border-blue-600', 'text-blue-600');
+        btn.classList.add('border-transparent', 'text-gray-500');
+    });
+    const panel = document.getElementById('stats-stab-panel-' + key);
+    const btn = document.getElementById('stats-stab-btn-' + key);
+    if (panel) panel.classList.remove('hidden');
+    if (btn) { btn.classList.remove('border-transparent', 'text-gray-500'); btn.classList.add('tab-active', 'border-blue-600', 'text-blue-600'); }
 }
 
 // Calculate ladder for a specific age group
