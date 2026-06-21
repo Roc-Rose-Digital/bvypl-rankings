@@ -41,8 +41,8 @@ const divisionGroups = [
         divisions: {
             'gld4pXExdW': { name: 'Junior Boys Sunday', fullName: 'Junior Boys Sunday', combined: false },
             'Bjma0p6VdR': { name: 'Junior Girls Sunday', fullName: 'Junior Girls Sunday', combined: false },
-            'vbd918ywd4': { name: 'Mixed Saturday',      fullName: 'Mixed Saturday',      combined: false },
-            'nPmrBVjAmo': { name: 'Mixed Sunday',        fullName: 'Mixed Sunday',        combined: false },
+            'vbd918ywd4': { name: 'Junior Mixed Saturday', fullName: 'Junior Mixed Saturday', combined: false },
+            'nPmrBVjAmo': { name: 'Junior Mixed Sunday',  fullName: 'Junior Mixed Sunday',  combined: false },
         }
     },
     {
