@@ -469,7 +469,13 @@ function setCascade(age, region, grade, type) {
     cascadeAge = ages.includes(age) ? age : ages[0] || '';
     const regions = [...new Set(parsed.filter(p => p.age === cascadeAge).map(p => p.region))].sort();
     cascadeRegion = regions.includes(region) ? region : regions[0] || '';
-    const grades = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.grade).filter(Boolean))].sort();
+    const miniRoosTeamOrder = ['Kangaroos', 'Wallabies', 'Joeys'];
+    const grades = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.grade).filter(Boolean))].sort((a, b) => {
+        const ai = miniRoosTeamOrder.findIndex(t => a.startsWith(t));
+        const bi = miniRoosTeamOrder.findIndex(t => b.startsWith(t));
+        if (ai !== -1 && bi !== -1) return ai !== bi ? ai - bi : a.localeCompare(b);
+        return a.localeCompare(b);
+    });
     cascadeGrade = grades.includes(grade) ? grade : grades[0] || '';
     const types = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.type).filter(Boolean))].sort();
     cascadeType = types.includes(type) ? type : types[0] || '';
@@ -495,7 +501,13 @@ function renderCascadeUI(containerId, parsed, ages) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const regions = [...new Set(parsed.filter(p => p.age === cascadeAge).map(p => p.region))].sort();
-    const grades = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.grade).filter(Boolean))].sort();
+    const miniRoosTeamOrder = ['Kangaroos', 'Wallabies', 'Joeys'];
+    const grades = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.grade).filter(Boolean))].sort((a, b) => {
+        const ai = miniRoosTeamOrder.findIndex(t => a.startsWith(t));
+        const bi = miniRoosTeamOrder.findIndex(t => b.startsWith(t));
+        if (ai !== -1 && bi !== -1) return ai !== bi ? ai - bi : a.localeCompare(b);
+        return a.localeCompare(b);
+    });
     const types = [...new Set(parsed.filter(p => p.age === cascadeAge && p.region === cascadeRegion).map(p => p.type).filter(Boolean))].sort();
     const isStatLeague = types.length > 0;
     const ageLabel = isStatLeague ? 'Level' : 'Age';
