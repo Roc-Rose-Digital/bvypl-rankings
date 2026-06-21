@@ -1143,9 +1143,9 @@ async function renderPlayerDetail(playerId) {
                     ${cached.image ? `<img src="${escAttr(cached.image)}" class="w-16 h-16 rounded-full object-cover bg-gray-100">` : '<div class="w-16 h-16 rounded-full bg-gray-100 flex-shrink-0"></div>'}
                     <div>
                         <h2 class="text-2xl font-bold">${escHtml(fullName)}</h2>
-                        ${cached.teamName ? `<div class="text-gray-500 text-sm mt-1 flex items-center gap-2">
+                        ${cached.teamName ? `<div class="text-sm mt-1 flex items-center gap-2">
                             ${cached.teamLogo ? `<img src="${escAttr(cached.teamLogo)}" class="w-5 h-5 object-contain">` : ''}
-                            <span>${escHtml(cached.teamName)}</span>
+                            <span class="text-blue-600 hover:underline cursor-pointer" data-club="${escAttr(getClubName(cached.teamName))}" onclick="navigateToTeam(this.dataset.club)">${escHtml(cached.teamName)}</span>
                         </div>` : ''}
                     </div>
                 </div>
