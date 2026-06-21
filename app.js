@@ -1113,8 +1113,38 @@ async function renderPlayerDetail(playerId) {
                 </div>
             </div>
             ${matchStatsHtml}
+            <div id="player-stats-section"></div>
         </div>
     `);
+
+    // Probe candidate stats endpoints — log results so we can see what the API exposes
+    const base = 'https://mc-api.dribl.com/api';
+    const season = 'nPmrj2rmow';
+    const tenant = 'w8zdBWPmBX';
+    const candidates = [
+        `${base}/stats/player/${encodeURIComponent(playerId)}?season=${season}&tenant=${tenant}`,
+        `${base}/player-stats?user_hash_id=${encodeURIComponent(playerId)}&season=${season}&tenant=${tenant}`,
+        `${base}/users/${encodeURIComponent(playerId)}/stats?season=${season}&tenant=${tenant}`,
+        `${base}/leaderboard/goals?user_hash_id=${encodeURIComponent(playerId)}&season=${season}&tenant=${tenant}`,
+    ];
+    for (const url of candidates) {
+        try {
+            const r = await fetch(url);
+            console.log(`[player stats] ${r.status} ${url}`);
+            if (r.ok) {
+                const data = await r.json();
+                console.log('[player stats data]', data);
+                const el = document.getElementById('player-stats-section');
+                if (el && data) {
+                    const attrs = data.data?.attributes || data.attributes || data.data || data;
+                    if (attrs && typeof attrs === 'object' && Object.keys(attrs).length) {
+                        el.innerHTML = renderApiSection(attrs, 'Season Stats', []);
+                    }
+                }
+                break;
+            }
+        } catch (e) { /* ignore */ }
+    }
 }
 
 async function populateTeamBreakdown(clubName) {
