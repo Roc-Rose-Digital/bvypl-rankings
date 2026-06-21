@@ -39,18 +39,18 @@ const divisionGroups = [
     {
         label: 'Community',
         divisions: {
-            'gld4pXExdW': { name: 'Junior Boys Sunday', fullName: 'Junior Boys Sunday', combined: false },
-            'Bjma0p6VdR': { name: 'Junior Girls Sunday', fullName: 'Junior Girls Sunday', combined: false },
-            'vbd918ywd4': { name: 'Junior Mixed Saturday', fullName: 'Junior Mixed Saturday', combined: false },
-            'nPmrBVjAmo': { name: 'Junior Mixed Sunday',  fullName: 'Junior Mixed Sunday',  combined: false },
+            'gld4pXExdW': { name: 'Junior Boys Sunday',   fullName: 'Junior Boys Sunday (U17 - U18)',   combined: false },
+            'Bjma0p6VdR': { name: 'Junior Girls Sunday',  fullName: 'Junior Girls Sunday (U12 - U18)',  combined: false },
+            'vbd918ywd4': { name: 'Junior Mixed Saturday', fullName: 'Junior Mixed Saturday (U12 - U16)', combined: false },
+            'nPmrBVjAmo': { name: 'Junior Mixed Sunday',  fullName: 'Junior Mixed Sunday (U12 - U16)',  combined: false },
         }
     },
     {
         label: 'MiniRoos',
         divisions: {
-            'Rxm8RpZLKr': { name: 'MiniRoos Saturday',    fullName: 'MiniRoos Saturday',    combined: false, fixturesOnly: true },
-            'gld4pXoDdW': { name: 'MiniRoos Sunday',      fullName: 'MiniRoos Sunday',      combined: false, fixturesOnly: true },
-            'jJmXQb5WNn': { name: 'MiniRoos Girls Sunday', fullName: 'MiniRoos Girls Sunday', combined: false, fixturesOnly: true },
+            'Rxm8RpZLKr': { name: 'MiniRoos Saturday',    fullName: 'Coles MiniRoos Mixed Saturday (U6 - U11)',    combined: false, fixturesOnly: true },
+            'gld4pXoDdW': { name: 'MiniRoos Sunday',      fullName: 'Coles MiniRoos Mixed Sunday (U6 - U11)',      combined: false, fixturesOnly: true },
+            'jJmXQb5WNn': { name: 'MiniRoos Girls Sunday', fullName: "Coles MiniRoos Girls' Sunday (U6 - U11)", combined: false, fixturesOnly: true },
         }
     },
 ];
