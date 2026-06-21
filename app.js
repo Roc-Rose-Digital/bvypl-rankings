@@ -288,17 +288,17 @@ function updateCombinedTabVisibility() {
 
 function showTab(tabName) {
     lastActiveTab = tabName;
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-    });
-    
-    // Remove active class from all buttons
-    document.querySelectorAll('nav button').forEach(btn => {
-        btn.classList.remove('tab-active');
-    });
-    
-    // Show selected tab
+
+    // If a detail view is open, close it first (without recursing back into showTab)
+    const detail = document.getElementById('detail-view');
+    if (detail && !detail.classList.contains('hidden')) {
+        detail.classList.add('hidden');
+        detail.innerHTML = '';
+        if (window.location.hash) history.pushState('', '', window.location.pathname);
+    }
+
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+    document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('tab-active'));
     document.getElementById(`content-${tabName}`).classList.remove('hidden');
     document.getElementById(`tab-${tabName}`).classList.add('tab-active');
 }
