@@ -1931,15 +1931,11 @@ function renderLeagueStatsResult(players) {
         </div>`;
 
     const topScorers = [...players].filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 20);
-    const topApps = [...players].sort((a, b) => b.appearances - a.appearances).slice(0, 20);
     const topCards = [...players].filter(p => p.yellows + p.reds > 0).sort((a, b) => (b.yellows + b.reds * 2) - (a.yellows + a.reds * 2)).slice(0, 20);
 
     const panels = [
         { key: 'scorers', label: 'Top Scorers', rows: topScorers.map(p => playerRow(p,
             `<div class="flex items-center gap-1">${'⚽'.repeat(Math.min(p.goals, 5))}${p.goals > 5 ? `<span class="text-xs text-gray-500 ml-1">×${p.goals}</span>` : ''}</div>`
-        )).join('') },
-        { key: 'appearances', label: 'Appearances', rows: topApps.map(p => playerRow(p,
-            `<span class="text-sm font-bold text-blue-700">${p.appearances}</span>`
         )).join('') },
         { key: 'cards', label: 'Cards', rows: topCards.map(p => playerRow(p,
             `<div class="flex items-center gap-2">
