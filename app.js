@@ -1117,34 +1117,62 @@ async function renderPlayerDetail(playerId) {
         </div>
     `);
 
-    // Probe candidate stats endpoints — log results so we can see what the API exposes
-    const base = 'https://mc-api.dribl.com/api';
-    const season = 'nPmrj2rmow';
-    const tenant = 'w8zdBWPmBX';
-    const candidates = [
-        `${base}/stats/player/${encodeURIComponent(playerId)}?season=${season}&tenant=${tenant}`,
-        `${base}/player-stats?user_hash_id=${encodeURIComponent(playerId)}&season=${season}&tenant=${tenant}`,
-        `${base}/users/${encodeURIComponent(playerId)}/stats?season=${season}&tenant=${tenant}`,
-        `${base}/leaderboard/goals?user_hash_id=${encodeURIComponent(playerId)}&season=${season}&tenant=${tenant}`,
-    ];
-    for (const url of candidates) {
-        try {
-            const r = await fetch(url);
-            console.log(`[player stats] ${r.status} ${url}`);
-            if (r.ok) {
-                const data = await r.json();
-                console.log('[player stats data]', data);
-                const el = document.getElementById('player-stats-section');
-                if (el && data) {
-                    const attrs = data.data?.attributes || data.attributes || data.data || data;
-                    if (attrs && typeof attrs === 'object' && Object.keys(attrs).length) {
-                        el.innerHTML = renderApiSection(attrs, 'Season Stats', []);
-                    }
-                }
-                break;
-            }
-        } catch (e) { /* ignore */ }
+    if (!isStaffMember && cached.teamName) {
+        populatePlayerSeasonStats(playerId, cached.teamName);
     }
+}
+
+async function populatePlayerSeasonStats(playerId, teamName) {
+    const el = document.getElementById('player-stats-section');
+    if (!el) return;
+    el.innerHTML = '<div class="text-center py-2 text-gray-400 text-xs">Loading season stats...</div>';
+
+    // Collect all results for this team across cached divisions
+    const matches = [];
+    for (const divData of Object.values(divisionCache)) {
+        for (const result of (divData.results || [])) {
+            const attrs = result.attributes || {};
+            const isHome = attrs.home_team_name === teamName;
+            const isAway = attrs.away_team_name === teamName;
+            if ((isHome || isAway) && attrs.match_hash_id) {
+                const teamHashId = isHome ? attrs.home_team_hash_id : attrs.away_team_hash_id;
+                if (teamHashId) matches.push({ matchHashId: attrs.match_hash_id, teamHashId });
+            }
+        }
+    }
+
+    if (!matches.length) { el.innerHTML = ''; return; }
+
+    const lineups = await Promise.all(matches.map(m =>
+        fetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${m.matchHashId}/team/${m.teamHashId}?tenant=w8zdBWPmBX`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+    ));
+
+    let goals = 0, appearances = 0;
+    for (const lineup of lineups) {
+        if (!Array.isArray(lineup)) continue;
+        const player = lineup.find(p => p.user_hash_id === playerId);
+        if (!player) continue;
+        appearances++;
+        if (player.has_goals && player.goals) goals += player.goals.length;
+    }
+
+    if (!el.isConnected) return;
+    el.innerHTML = `
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Season Stats</div>
+            <div class="flex gap-8 text-sm">
+                <div class="text-center">
+                    <div class="text-2xl font-bold">${appearances}</div>
+                    <div class="text-gray-500 text-xs mt-1">Appearances</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold">${goals}</div>
+                    <div class="text-gray-500 text-xs mt-1">Goals</div>
+                </div>
+            </div>
+        </div>`;
 }
 
 async function populateTeamBreakdown(clubName) {
