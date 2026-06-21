@@ -16,6 +16,7 @@ const divisions = {
         '3pmvQvbDdv': { name: 'Girls YPL', fullName: 'Girls Victorian Youth Premier League', combined: true },
         'vbd918ywd4': { name: 'Saturday Mixed', fullName: 'Saturday Mixed', combined: false },
         'nPmrBVjAmo': { name: 'Sunday Mixed', fullName: 'Sunday Mixed', combined: false },
+        'Rxm8RpZLKr': { name: 'MiniRoos', fullName: 'MiniRoos', combined: false },
         'wOmejBq1N0': { name: "Men's State League", fullName: "Men's State League", combined: false }
     },
     girls: {}
