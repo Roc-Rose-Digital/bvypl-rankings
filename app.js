@@ -25,8 +25,7 @@ const divisionCache = {};
 
 async function fetchAllPagesForLeague(endpoint, leagueId, divisionId) {
     const baseUrl = 'https://mc-api.dribl.com/api';
-    const dateParam = endpoint === 'results' ? '' : '&date_range=default';
-    const params = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney${dateParam}`;
+    const params = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
     let allData = [];
     let cursor = null;
     let hasMore = true;
@@ -40,7 +39,7 @@ async function fetchAllPagesForLeague(endpoint, leagueId, divisionId) {
             const meta = json.meta || {};
             if (endpoint === 'results' && meta.prev_cursor) {
                 cursor = meta.prev_cursor;
-            } else if (endpoint !== 'results' && meta.next_cursor) {
+            } else if (endpoint === 'fixtures' && meta.next_cursor) {
                 cursor = meta.next_cursor;
             } else {
                 hasMore = false;
@@ -100,11 +99,11 @@ async function loadData(gender = 'boys', divisionId = null) {
         const leagueIds = leaguesData.map(l => l.id);
         
         // Helper function to fetch all pages.
-        // The Dribl API returns results newest-first; prev_cursor pages backwards through history.
-        // Fixtures use next_cursor for upcoming matches.
+        // Dribl returns results newest-first (follow prev_cursor for history).
+        // Fixtures are returned oldest-first (follow next_cursor for more upcoming).
+        // Neither uses date_range so we get the full season.
         async function fetchAllPages(endpoint, leagueId) {
-            const dateParam = endpoint === 'results' ? '' : '&date_range=default';
-            const epParams = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney${dateParam}`;
+            const epParams = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
             let allData = [];
             let cursor = null;
             let hasMore = true;
@@ -118,10 +117,8 @@ async function loadData(gender = 'boys', divisionId = null) {
                     const meta = json.meta || {};
                     if (endpoint === 'results' && meta.prev_cursor) {
                         cursor = meta.prev_cursor;
-                    } else if (endpoint !== 'results' && meta.next_cursor) {
+                    } else if (endpoint === 'fixtures' && meta.next_cursor) {
                         cursor = meta.next_cursor;
-                    } else if (meta.current_page && meta.last_page && meta.current_page < meta.last_page) {
-                        cursor = null;
                     } else {
                         hasMore = false;
                     }
