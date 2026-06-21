@@ -18,6 +18,7 @@ const divisions = {
         'nPmrBVjAmo': { name: 'Sunday Mixed', fullName: 'Sunday Mixed', combined: false },
         'Rxm8RpZLKr': { name: 'MiniRoos Sat', fullName: 'MiniRoos Saturday', combined: false, fixturesOnly: true },
         'gld4pXoDdW': { name: 'MiniRoos Sun', fullName: 'MiniRoos Sunday', combined: false, fixturesOnly: true },
+        'jJmXQb5WNn': { name: 'MiniRoos Girls Sun', fullName: 'MiniRoos Girls Sunday', combined: false, fixturesOnly: true },
         '1pN6pRypd0': { name: 'NPL Men', fullName: 'NPL Victoria Men', combined: false },
         'k2KpR0XbmY': { name: 'NPL Women', fullName: 'NPL Victoria Women', combined: false },
         'LBdDxbvJdb': { name: 'VPL Men 1', fullName: 'VPL Men 1', combined: false },
@@ -400,7 +401,7 @@ function parseLeagueName(name) {
     if (!name) return null;
 
     // MiniRoos: "[discontinued] Coles MiniRoos Mixed Saturday/Sunday {Region} {Age} {Grade}"
-    const miniRoosMatch = name.replace(/^\([^)]*\)\s*/, '').match(/^Coles MiniRoos Mixed (?:Saturday|Sunday) (.+)$/);
+    const miniRoosMatch = name.replace(/^\([^)]*\)\s*/, '').match(/^Coles MiniRoos (?:Mixed (?:Saturday|Sunday)|Girls') (.+)$/);
     if (miniRoosMatch) {
         let n = miniRoosMatch[1];
         const regions = ['North-West', 'North-East', 'South-East', 'South-West', 'North', 'South', 'East', 'West'];
