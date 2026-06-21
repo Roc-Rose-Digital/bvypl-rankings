@@ -120,6 +120,7 @@ async function loadData(gender = 'boys', divisionId = null) {
                     const json = await response.json();
                     if (json.data && json.data.length > 0) allData = allData.concat(json.data);
                     const meta = json.meta || {};
+                    console.log(`[${endpoint}] league=${leagueId} page=${page} got=${json.data?.length ?? 0} meta=`, JSON.stringify(meta));
                     if (meta.next_cursor) {
                         cursor = meta.next_cursor;
                     } else if (meta.current_page && meta.last_page && meta.current_page < meta.last_page) {
