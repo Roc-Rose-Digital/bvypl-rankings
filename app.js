@@ -396,6 +396,20 @@ let cascadeType = '';
 function parseLeagueName(name) {
     if (!name) return null;
 
+    // MiniRoos: "Coles MiniRoos Mixed Saturday {Region} {Age} {Grade}"
+    const miniRoosPrefix = 'Coles MiniRoos Mixed Saturday ';
+    if (name.startsWith(miniRoosPrefix)) {
+        let n = name.slice(miniRoosPrefix.length);
+        const regions = ['North-West', 'North-East', 'South-East', 'South-West', 'North', 'South', 'East', 'West'];
+        let region = null;
+        for (const r of regions) {
+            if (n.startsWith(r + ' ')) { region = r; n = n.slice(r.length + 1); break; }
+        }
+        const m = n.match(/^(\d+)\s+(.+)$/);
+        if (m && region) return { age: m[1], region, grade: m[2], type: null };
+        return null;
+    }
+
     // Men's State League: "State League N Men's - Region[ Reserves]"
     const stateMatch = name.match(/State League (\d+)\s+Men's\s*-\s*(.+)/i);
     if (stateMatch) {
