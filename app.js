@@ -17,6 +17,11 @@ const divisions = {
         'vbd918ywd4': { name: 'Saturday Mixed', fullName: 'Saturday Mixed', combined: false },
         'nPmrBVjAmo': { name: 'Sunday Mixed', fullName: 'Sunday Mixed', combined: false },
         'Rxm8RpZLKr': { name: 'MiniRoos', fullName: 'MiniRoos', combined: false, fixturesOnly: true },
+        '1pN6pRypd0': { name: 'NPL Men', fullName: 'NPL Victoria Men', combined: false },
+        'k2KpR0XbmY': { name: 'NPL Women', fullName: 'NPL Victoria Women', combined: false },
+        'LBdDxbvJdb': { name: 'VPL Men 1', fullName: 'VPL Men 1', combined: false },
+        'vbd91pPYd4': { name: 'VPL Men 2', fullName: 'VPL Men 2', combined: false },
+        'R1K3BpA9NQ': { name: 'VPL Women', fullName: 'VPL Women', combined: false },
         'wOmejBq1N0': { name: "Men's State League", fullName: "Men's State League", combined: false }
     },
     girls: {}
