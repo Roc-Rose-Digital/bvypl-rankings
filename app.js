@@ -1102,6 +1102,7 @@ async function renderPlayerDetail(playerId) {
             ${matchStatsHtml}
         </div>
     `);
+}
 
 async function populateTeamBreakdown(clubName) {
     const el = document.getElementById('team-breakdown-section');
