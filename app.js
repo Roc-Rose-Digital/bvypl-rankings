@@ -2037,13 +2037,6 @@ function renderAgeGroupLadders() {
     });
     
     laddersContainer.innerHTML = laddersHtml;
-    
-    if (leaguesData.length > 0) {
-        const targetId = selectedLadderLeague || leaguesData[0].id;
-        document.querySelectorAll('.age-group-ladder').forEach(el => {
-            el.style.display = el.dataset.league === targetId ? 'block' : 'none';
-        });
-    }
 }
 
 
