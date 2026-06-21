@@ -758,8 +758,10 @@ function renderLineup(players, teamName, teamLogo) {
 
     if (!starters.length && !bench.length) return '';
 
-    const renderPlayer = (p) => {
-        if (p.hash_id) playerCache[p.hash_id] = { ...p, teamName, teamLogo: teamLogo || '' };
+    const renderPlayer = (p, idx) => {
+        if (idx === 0) console.log('[lineup player keys]', Object.keys(p));
+        const pid = p.hash_id || p.player_hash_id || p.id || p.player_id || '';
+        if (pid) playerCache[pid] = { ...p, teamName, teamLogo: teamLogo || '' };
         const name = escHtml(`${p.first_name} ${p.last_name}`);
         const pos = p.is_goalkeeper ? 'GK' : (p.field_role || '');
         const cardHtml = p.has_cards
@@ -773,8 +775,8 @@ function renderLineup(players, teamName, teamLogo) {
             ? `<span class="text-xs text-gray-500">${p.goals.length > 1 ? p.goals.length + 'G' : 'G'}</span>`
             : '';
         const capHtml = p.is_captain ? '<span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-1">C</span>' : '';
-        const nameEl = p.hash_id
-            ? `<span class="flex-1 text-sm font-medium text-blue-700 cursor-pointer hover:underline" data-id="${escAttr(p.hash_id)}" onclick="navigateToPlayer(this.dataset.id)">${name}</span>`
+        const nameEl = pid
+            ? `<span class="flex-1 text-sm font-medium text-blue-700 cursor-pointer hover:underline" data-id="${escAttr(pid)}" onclick="navigateToPlayer(this.dataset.id)">${name}</span>`
             : `<span class="flex-1 text-sm font-medium">${name}</span>`;
 
         return `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
