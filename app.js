@@ -1409,6 +1409,7 @@ async function populateSquadAndStats(clubName) {
                 if (!p.user_hash_id || isStaffRole(p)) continue;
                 const pid = p.user_hash_id;
                 if (!players[pid]) players[pid] = { pid, name: `${p.first_name} ${p.last_name}`, image: p.image || '', goals: 0, yellows: 0, reds: 0, appearances: 0 };
+                if (!playerCache[pid]) playerCache[pid] = { ...p, teamName, teamLogo: clubLogoMap[clubName] || '' };
                 players[pid].appearances++;
                 if (p.has_goals && p.goals) players[pid].goals += p.goals.length;
                 if (p.has_cards && p.cards) {
