@@ -524,6 +524,19 @@ function hideDetailView() {
     showTab(lastActiveTab);
 }
 
+function showTeamTab(name) {
+    ['overview', 'squad', 'results', 'fixtures'].forEach(t => {
+        const panel = document.getElementById('team-panel-' + t);
+        const btn = document.getElementById('team-tab-' + t);
+        if (panel) panel.classList.toggle('hidden', t !== name);
+        if (btn) {
+            btn.classList.toggle('tab-active', t === name);
+            btn.classList.toggle('hover:text-blue-600', t !== name);
+        }
+    });
+    window.scrollTo(0, 0);
+}
+
 function showMatchTab(name) {
     sessionStorage.setItem('lastMatchTab', name);
     ['summary', 'home', 'away'].forEach(t => {
@@ -976,11 +989,11 @@ async function renderTeamDetail(clubName) {
 
 
     const html = `
-        <button onclick="history.back()" class="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold">
+        <button onclick="history.back()" class="mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold text-sm">
             ← Back
         </button>
 
-        <div class="bg-blue-600 text-white rounded-lg shadow-md p-6 mb-6">
+        <div class="bg-blue-600 text-white rounded-lg shadow-md p-6 mb-4">
             <div class="flex items-center gap-4">
                 ${logo ? `<img src="${escAttr(logo)}" alt="${escAttr(clubName)}" class="w-16 h-16 object-contain bg-white rounded p-1">` : ''}
                 <div>
@@ -990,69 +1003,83 @@ async function renderTeamDetail(clubName) {
             </div>
         </div>
 
-        ${divisions.boys[currentDivision]?.combined ? `
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-lg font-bold mb-4">Season Summary</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-center">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">P</th>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">W</th>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">D</th>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">L</th>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GF</th>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GA</th>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GD</th>
-                            <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Pts</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="px-3 py-3">${stats.played}</td>
-                            <td class="px-3 py-3">${stats.won}</td>
-                            <td class="px-3 py-3">${stats.drawn}</td>
-                            <td class="px-3 py-3">${stats.lost}</td>
-                            <td class="px-3 py-3">${stats.gf}</td>
-                            <td class="px-3 py-3">${stats.ga}</td>
-                            <td class="px-3 py-3 font-semibold ${stats.gd >= 0 ? 'text-green-600' : 'text-red-600'}">${stats.gd > 0 ? '+' : ''}${stats.gd}</td>
-                            <td class="px-3 py-3 font-bold text-blue-600">${stats.pts}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>` : ''}
-
-        <div id="team-breakdown-section">
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div class="text-center py-4 text-gray-400 text-sm">Loading all divisions...</div>
+        <div class="bg-white rounded-lg shadow-md mb-6">
+            <div class="flex overflow-x-auto border-b border-gray-200 px-2">
+                <button onclick="showTeamTab('overview')" id="team-tab-overview" class="py-3 px-4 text-sm whitespace-nowrap tab-active">Overview</button>
+                <button onclick="showTeamTab('squad')" id="team-tab-squad" class="py-3 px-4 text-sm whitespace-nowrap hover:text-blue-600">Squad</button>
+                <button onclick="showTeamTab('results')" id="team-tab-results" class="py-3 px-4 text-sm whitespace-nowrap hover:text-blue-600">Results</button>
+                <button onclick="showTeamTab('fixtures')" id="team-tab-fixtures" class="py-3 px-4 text-sm whitespace-nowrap hover:text-blue-600">Fixtures</button>
             </div>
         </div>
 
-        <div id="team-stats-section">
+        <div id="team-panel-overview">
+            ${divisions.boys[currentDivision]?.combined ? `
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div class="text-center py-4 text-gray-400 text-sm">Loading team stats...</div>
+                <h3 class="text-lg font-bold mb-4">Season Summary</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-center">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">P</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">W</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">D</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">L</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GF</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GA</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">GD</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="px-3 py-3">${stats.played}</td>
+                                <td class="px-3 py-3">${stats.won}</td>
+                                <td class="px-3 py-3">${stats.drawn}</td>
+                                <td class="px-3 py-3">${stats.lost}</td>
+                                <td class="px-3 py-3">${stats.gf}</td>
+                                <td class="px-3 py-3">${stats.ga}</td>
+                                <td class="px-3 py-3 font-semibold ${stats.gd >= 0 ? 'text-green-600' : 'text-red-600'}">${stats.gd > 0 ? '+' : ''}${stats.gd}</td>
+                                <td class="px-3 py-3 font-bold text-blue-600">${stats.pts}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>` : ''}
+            <div id="team-breakdown-section">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="text-center py-4 text-gray-400 text-sm">Loading...</div>
+                </div>
             </div>
         </div>
 
-        <div id="team-squad-section">
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div class="text-center py-4 text-gray-400 text-sm">Loading squad...</div>
+        <div id="team-panel-squad" class="hidden">
+            <div id="team-stats-section">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="text-center py-4 text-gray-400 text-sm">Loading...</div>
+                </div>
+            </div>
+            <div id="team-squad-section">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="text-center py-4 text-gray-400 text-sm">Loading...</div>
+                </div>
             </div>
         </div>
 
-        <div id="team-results-section">
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div class="text-center py-4 text-gray-400 text-sm">Loading results...</div>
+        <div id="team-panel-results" class="hidden">
+            <div id="team-results-section">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="text-center py-4 text-gray-400 text-sm">Loading...</div>
+                </div>
             </div>
         </div>
 
-        <div id="team-fixtures-section">
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div class="text-center py-4 text-gray-400 text-sm">Loading fixtures...</div>
+        <div id="team-panel-fixtures" class="hidden">
+            <div id="team-fixtures-section">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="text-center py-4 text-gray-400 text-sm">Loading...</div>
+                </div>
             </div>
         </div>
-
     `;
 
     showDetailView(html);
@@ -1451,7 +1478,8 @@ async function populateSquadAndStats(clubName) {
             for (const p of lineup) {
                 if (!p.user_hash_id || isStaffRole(p)) continue;
                 const pid = p.user_hash_id;
-                if (!players[pid]) players[pid] = { pid, name: `${p.first_name} ${p.last_name}`, image: p.image || '', goals: 0, yellows: 0, reds: 0, appearances: 0 };
+                if (!players[pid]) players[pid] = { pid, name: `${p.first_name} ${p.last_name}`, image: p.image || '', jersey: '', goals: 0, yellows: 0, reds: 0, appearances: 0 };
+                if (!players[pid].jersey && p.jersey) players[pid].jersey = String(p.jersey);
                 if (!playerCache[pid]) playerCache[pid] = { ...p, teamName, teamLogo: clubLogoMap[clubName] || '' };
                 players[pid].appearances++;
                 if (p.has_goals && p.goals) players[pid].goals += p.goals.length;
@@ -1533,30 +1561,35 @@ async function populateSquadAndStats(clubName) {
             // Squad table
             const squadRows = d.players.map(p => `
                 <tr class="stripe-row border-b border-gray-100 last:border-0">
-                    <td class="py-2 pr-2">
-                        ${p.image ? `<img src="${escAttr(p.image)}" class="w-7 h-7 rounded-full object-cover bg-gray-100" onerror="this.style.display='none'">` : '<div class="w-7 h-7 rounded-full bg-gray-100"></div>'}
+                    <td class="py-3 pr-2 w-8">
+                        ${p.image ? `<img src="${escAttr(p.image)}" class="w-8 h-8 rounded-full object-cover bg-gray-100" onerror="this.style.display='none'">` : '<div class="w-8 h-8 rounded-full bg-gray-100"></div>'}
                     </td>
-                    <td class="py-2 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</td>
-                    <td class="py-2 text-center text-sm text-gray-600">${p.appearances}</td>
-                    <td class="py-2 text-center text-sm">${p.goals ? '⚽'.repeat(Math.min(p.goals, 3)) + (p.goals > 3 ? `<span class="text-xs text-gray-500">×${p.goals}</span>` : '') : ''}</td>
-                    <td class="py-2 text-center text-sm">
-                        ${p.yellows ? `<span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm align-middle"></span>${p.yellows > 1 ? `<span class="text-xs text-gray-500"> ×${p.yellows}</span>` : ''}` : ''}
-                        ${p.reds ? `<span class="inline-block w-3 h-4 bg-red-600 rounded-sm align-middle ml-1"></span>${p.reds > 1 ? `<span class="text-xs text-gray-500"> ×${p.reds}</span>` : ''}` : ''}
+                    <td class="py-3 pr-4 text-xs text-gray-400 w-10 text-right">${p.jersey ? escHtml(p.jersey) : ''}</td>
+                    <td class="py-3 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</td>
+                    <td class="py-3 text-center text-sm text-gray-700 w-16 font-semibold">${p.appearances}</td>
+                    <td class="py-3 text-center w-24">${p.goals ? `<span class="text-sm">${'⚽'.repeat(Math.min(p.goals, 3))}${p.goals > 3 ? `<span class="text-xs text-gray-500"> ×${p.goals}</span>` : ''}</span>` : '<span class="text-gray-300 text-xs">—</span>'}</td>
+                    <td class="py-3 text-center w-24">
+                        <div class="flex items-center justify-center gap-1">
+                        ${p.yellows ? `<span class="inline-flex items-center gap-0.5"><span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm"></span><span class="text-xs text-gray-500">${p.yellows > 1 ? p.yellows : ''}</span></span>` : ''}
+                        ${p.reds ? `<span class="inline-flex items-center gap-0.5"><span class="inline-block w-3 h-4 bg-red-600 rounded-sm"></span><span class="text-xs text-gray-500">${p.reds > 1 ? p.reds : ''}</span></span>` : ''}
+                        ${!p.yellows && !p.reds ? '<span class="text-gray-300 text-xs">—</span>' : ''}
+                        </div>
                     </td>
                 </tr>`).join('');
 
             html += `<div class="bg-white rounded-lg shadow-md p-6 mb-6">
                 ${sectionHeader}
                 ${scorersHtml}
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Squad</div>
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Squad</div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
-                        <thead><tr class="border-b border-gray-200">
-                            <th class="pb-2 w-8"></th>
-                            <th class="pb-2 text-left text-xs font-semibold text-gray-500">Player</th>
-                            <th class="pb-2 text-center text-xs font-semibold text-gray-500 w-12">Apps</th>
-                            <th class="pb-2 text-center text-xs font-semibold text-gray-500 w-16">Goals</th>
-                            <th class="pb-2 text-center text-xs font-semibold text-gray-500 w-16">Cards</th>
+                        <thead><tr class="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
+                            <th class="pb-3 w-8"></th>
+                            <th class="pb-3 w-10 text-right pr-4">#</th>
+                            <th class="pb-3 text-left">Player</th>
+                            <th class="pb-3 text-center w-16">Apps</th>
+                            <th class="pb-3 text-center w-24">Goals</th>
+                            <th class="pb-3 text-center w-24">Cards</th>
                         </tr></thead>
                         <tbody>${squadRows}</tbody>
                     </table>
