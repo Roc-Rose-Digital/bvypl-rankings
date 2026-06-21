@@ -16,7 +16,8 @@ const divisions = {
         '3pmvQvbDdv': { name: 'Girls YPL', fullName: 'Girls Victorian Youth Premier League', combined: true },
         'vbd918ywd4': { name: 'Saturday Mixed', fullName: 'Saturday Mixed', combined: false },
         'nPmrBVjAmo': { name: 'Sunday Mixed', fullName: 'Sunday Mixed', combined: false },
-        'Rxm8RpZLKr': { name: 'MiniRoos', fullName: 'MiniRoos', combined: false, fixturesOnly: true },
+        'Rxm8RpZLKr': { name: 'MiniRoos Sat', fullName: 'MiniRoos Saturday', combined: false, fixturesOnly: true },
+        'gld4pXoDdW': { name: 'MiniRoos Sun', fullName: 'MiniRoos Sunday', combined: false, fixturesOnly: true },
         '1pN6pRypd0': { name: 'NPL Men', fullName: 'NPL Victoria Men', combined: false },
         'k2KpR0XbmY': { name: 'NPL Women', fullName: 'NPL Victoria Women', combined: false },
         'LBdDxbvJdb': { name: 'VPL Men 1', fullName: 'VPL Men 1', combined: false },
@@ -396,10 +397,10 @@ let cascadeType = '';
 function parseLeagueName(name) {
     if (!name) return null;
 
-    // MiniRoos: "Coles MiniRoos Mixed Saturday {Region} {Age} {Grade}"
-    const miniRoosPrefix = 'Coles MiniRoos Mixed Saturday ';
-    if (name.startsWith(miniRoosPrefix)) {
-        let n = name.slice(miniRoosPrefix.length);
+    // MiniRoos: "[discontinued] Coles MiniRoos Mixed Saturday/Sunday {Region} {Age} {Grade}"
+    const miniRoosMatch = name.replace(/^\([^)]*\)\s*/, '').match(/^Coles MiniRoos Mixed (?:Saturday|Sunday) (.+)$/);
+    if (miniRoosMatch) {
+        let n = miniRoosMatch[1];
         const regions = ['North-West', 'North-East', 'South-East', 'South-West', 'North', 'South', 'East', 'West'];
         let region = null;
         for (const r of regions) {
