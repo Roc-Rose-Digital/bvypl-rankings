@@ -25,27 +25,23 @@ const divisionCache = {};
 
 async function fetchAllPagesForLeague(endpoint, leagueId, divisionId) {
     const baseUrl = 'https://mc-api.dribl.com/api';
-    // Results: no date_range so we get the full season history
-    // Fixtures: date_range=default to get upcoming matches
     const dateParam = endpoint === 'results' ? '' : '&date_range=default';
     const params = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney${dateParam}`;
     let allData = [];
     let cursor = null;
-    let page = 1;
     let hasMore = true;
     while (hasMore) {
-        const cursorPart = cursor ? `&cursor=${cursor}` : `&page=${page}`;
+        const cursorPart = cursor ? `&cursor=${cursor}` : '';
         const url = `${baseUrl}/${endpoint}?${params}&league=${leagueId}${cursorPart}`;
         try {
             const response = await fetch(url);
             const json = await response.json();
             if (json.data && json.data.length > 0) allData = allData.concat(json.data);
             const meta = json.meta || {};
-            if (meta.next_cursor) {
+            if (endpoint === 'results' && meta.prev_cursor) {
+                cursor = meta.prev_cursor;
+            } else if (endpoint !== 'results' && meta.next_cursor) {
                 cursor = meta.next_cursor;
-            } else if (meta.current_page && meta.last_page && meta.current_page < meta.last_page) {
-                page++;
-                cursor = null;
             } else {
                 hasMore = false;
             }
@@ -103,28 +99,28 @@ async function loadData(gender = 'boys', divisionId = null) {
         // Fetch fixtures and results for each league with pagination
         const leagueIds = leaguesData.map(l => l.id);
         
-        // Helper function to fetch all pages — supports cursor and page-based pagination
-        // Results omit date_range to get the full season; fixtures use date_range=default for upcoming
+        // Helper function to fetch all pages.
+        // The Dribl API returns results newest-first; prev_cursor pages backwards through history.
+        // Fixtures use next_cursor for upcoming matches.
         async function fetchAllPages(endpoint, leagueId) {
             const dateParam = endpoint === 'results' ? '' : '&date_range=default';
             const epParams = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney${dateParam}`;
             let allData = [];
             let cursor = null;
-            let page = 1;
             let hasMore = true;
             while (hasMore) {
-                const cursorPart = cursor ? `&cursor=${cursor}` : `&page=${page}`;
+                const cursorPart = cursor ? `&cursor=${cursor}` : '';
                 const url = `${baseUrl}/${endpoint}?${epParams}&league=${leagueId}${cursorPart}`;
                 try {
                     const response = await fetch(url);
                     const json = await response.json();
                     if (json.data && json.data.length > 0) allData = allData.concat(json.data);
                     const meta = json.meta || {};
-                    console.log(`[${endpoint}] league=${leagueId} page=${page} got=${json.data?.length ?? 0} meta=`, JSON.stringify(meta));
-                    if (meta.next_cursor) {
+                    if (endpoint === 'results' && meta.prev_cursor) {
+                        cursor = meta.prev_cursor;
+                    } else if (endpoint !== 'results' && meta.next_cursor) {
                         cursor = meta.next_cursor;
                     } else if (meta.current_page && meta.last_page && meta.current_page < meta.last_page) {
-                        page++;
                         cursor = null;
                     } else {
                         hasMore = false;
