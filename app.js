@@ -1100,27 +1100,8 @@ async function renderPlayerDetail(playerId) {
                 </div>
             </div>
             ${matchStatsHtml}
-            <div id="player-api-section">
-                <div class="text-center py-4 text-gray-400 text-sm">Loading profile...</div>
-            </div>
         </div>
     `);
-
-    try {
-        const resp = await fetch(`https://mc-api.dribl.com/api/players/${encodeURIComponent(playerId)}?tenant=w8zdBWPmBX&timezone=Australia/Sydney`);
-        const data = resp.ok ? await resp.json() : null;
-        const el = document.getElementById('player-api-section');
-        if (!el) return;
-        if (!data) { el.innerHTML = ''; return; }
-        const attrs = data.data?.attributes || data.attributes || data.data || data;
-        if (!attrs || typeof attrs !== 'object' || !Object.keys(attrs).length) { el.innerHTML = ''; return; }
-        const skipFields = ['hash_id', 'id', 'image', 'photo', 'avatar', 'thumbnail', 'first_name', 'last_name', 'name'];
-        el.innerHTML = renderApiSection(attrs, 'Player Profile', skipFields);
-    } catch (e) {
-        const el = document.getElementById('player-api-section');
-        if (el) el.innerHTML = '';
-    }
-}
 
 async function populateTeamBreakdown(clubName) {
     const el = document.getElementById('team-breakdown-section');
