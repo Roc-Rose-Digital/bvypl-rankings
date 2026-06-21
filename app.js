@@ -86,6 +86,7 @@ async function loadData(gender = 'boys', divisionId = null) {
             divisionId = Object.keys(allDivisions)[0];
         }
         currentDivision = divisionId;
+        selectedFixturePeriod = 'upcoming';
 
         // Show loading message
         document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${allDivisions[divisionId].fullName} data from API...</div>`;
@@ -380,6 +381,7 @@ let selectedFixtureLeague = '';
 let selectedResultLeague = '';
 let selectedLadderLeague = '';
 let selectedStatsLeague = '';
+let selectedFixturePeriod = 'upcoming';
 const leagueStatsCache = {};
 let selectedFixtureRound = '';
 let selectedResultRound = '';
@@ -1928,6 +1930,11 @@ function renderLeagueStatsResult(players) {
         ${tabPanels}`;
 }
 
+function showFixturePeriod(period) {
+    selectedFixturePeriod = period;
+    renderFixtures();
+}
+
 function showStatsSubTab(key) {
     document.querySelectorAll('[id^="stats-stab-panel-"]').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('[id^="stats-stab-btn-"]').forEach(btn => {
@@ -2257,16 +2264,38 @@ function renderFixtures() {
     const leagueFilter = selectedFixtureLeague;
     const container = document.getElementById('fixtures-list');
     
-    let filteredFixtures = fixturesData.filter(fixture => {
-        const attrs = fixture.attributes;
-        const isPending = attrs.status === 'pending';
-        const matchesRound = !roundFilter || attrs.round === roundFilter.replace('roundrobin_', 'R');
-        const matchesLeague = !leagueFilter || leaguesData.find(l => l.id === leagueFilter)?.name === attrs.league_name;
-        return isPending && matchesRound && matchesLeague;
-    });
-    
+    const divConfig = divisions.boys[currentDivision] || divisions.girls[currentDivision] || {};
+    const isFixturesOnly = !!divConfig.fixturesOnly;
+
+    let filteredFixtures;
+    if (isFixturesOnly) {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        filteredFixtures = fixturesData.filter(fixture => {
+            const attrs = fixture.attributes;
+            const matchDate = new Date(attrs.date);
+            const matchesRound = !roundFilter || attrs.round === roundFilter.replace('roundrobin_', 'R');
+            const matchesLeague = !leagueFilter || leaguesData.find(l => l.id === leagueFilter)?.name === attrs.league_name;
+            const matchesPeriod = selectedFixturePeriod === 'upcoming' ? matchDate >= today : matchDate < today;
+            return matchesRound && matchesLeague && matchesPeriod;
+        });
+    } else {
+        filteredFixtures = fixturesData.filter(fixture => {
+            const attrs = fixture.attributes;
+            const isPending = attrs.status === 'pending';
+            const matchesRound = !roundFilter || attrs.round === roundFilter.replace('roundrobin_', 'R');
+            const matchesLeague = !leagueFilter || leaguesData.find(l => l.id === leagueFilter)?.name === attrs.league_name;
+            return isPending && matchesRound && matchesLeague;
+        });
+    }
+
+    const periodTabsHtml = isFixturesOnly ? `
+        <div class="flex gap-1 mb-6">
+            <button onclick="showFixturePeriod('upcoming')" class="px-4 py-2 rounded text-sm font-medium ${selectedFixturePeriod === 'upcoming' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 shadow'}">Upcoming</button>
+            <button onclick="showFixturePeriod('past')" class="px-4 py-2 rounded text-sm font-medium ${selectedFixturePeriod === 'past' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 shadow'}">Past</button>
+        </div>` : '';
+
     if (filteredFixtures.length === 0) {
-        container.innerHTML = '<div class="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">No fixtures found</div>';
+        container.innerHTML = periodTabsHtml + '<div class="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">No fixtures found</div>';
         return;
     }
     
@@ -2289,12 +2318,12 @@ function renderFixtures() {
         fixturesByRound[round][matchupKey].push(fixture);
     });
     
-    let html = '';
-    // Sort rounds numerically by extracting the round number
+    let html = periodTabsHtml;
+    // Sort rounds numerically; Past tab shows newest first
     Object.keys(fixturesByRound).sort((a, b) => {
         const numA = parseInt(a.match(/\d+/)?.[0] || '0');
         const numB = parseInt(b.match(/\d+/)?.[0] || '0');
-        return numA - numB;
+        return (isFixturesOnly && selectedFixturePeriod === 'past') ? numB - numA : numA - numB;
     }).forEach(round => {
         html += `
             <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
