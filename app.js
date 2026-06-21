@@ -758,9 +758,8 @@ function renderLineup(players, teamName, teamLogo) {
 
     if (!starters.length && !bench.length) return '';
 
-    const renderPlayer = (p, idx) => {
-        if (idx === 0) console.log('[lineup player keys]', Object.keys(p));
-        const pid = p.hash_id || p.player_hash_id || p.id || p.player_id || '';
+    const renderPlayer = (p) => {
+        const pid = p.user_hash_id || '';
         if (pid) playerCache[pid] = { ...p, teamName, teamLogo: teamLogo || '' };
         const name = escHtml(`${p.first_name} ${p.last_name}`);
         const pos = p.is_goalkeeper ? 'GK' : (p.field_role || '');
