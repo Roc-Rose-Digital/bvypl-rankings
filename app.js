@@ -753,10 +753,18 @@ function navigateToPlayer(id) {
 function renderLineup(players, teamName, teamLogo) {
     if (!Array.isArray(players) || !players.length) return '';
 
-    const starters = players.filter(p => p.starting).sort((a, b) => (parseInt(a.jersey) || 99) - (parseInt(b.jersey) || 99));
-    const bench = players.filter(p => !p.starting && p.available).sort((a, b) => (parseInt(a.jersey) || 99) - (parseInt(b.jersey) || 99));
+    const isStaff = (p) => {
+        const r = (p.role_slug || '').toLowerCase();
+        return r.includes('coach') || r.includes('manager') || r.includes('staff') ||
+               r.includes('physio') || r.includes('trainer') || r.includes('doctor');
+    };
+    const staffLabel = (slug) => slug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-    if (!starters.length && !bench.length) return '';
+    const starters = players.filter(p => !isStaff(p) && p.starting).sort((a, b) => (parseInt(a.jersey) || 99) - (parseInt(b.jersey) || 99));
+    const bench = players.filter(p => !isStaff(p) && !p.starting && p.available).sort((a, b) => (parseInt(a.jersey) || 99) - (parseInt(b.jersey) || 99));
+    const staff = players.filter(isStaff);
+
+    if (!starters.length && !bench.length && !staff.length) return '';
 
     const renderPlayer = (p) => {
         const pid = p.user_hash_id || '';
@@ -787,6 +795,22 @@ function renderLineup(players, teamName, teamLogo) {
         </div>`;
     };
 
+    const renderStaff = (p) => {
+        const pid = p.user_hash_id || '';
+        if (pid) playerCache[pid] = { ...p, teamName, teamLogo: teamLogo || '', isStaffMember: true };
+        const name = escHtml(`${p.first_name} ${p.last_name}`);
+        const role = p.role_slug ? escHtml(staffLabel(p.role_slug)) : '';
+        const nameEl = pid
+            ? `<span class="flex-1 text-sm font-medium text-blue-700 cursor-pointer hover:underline" data-id="${escAttr(pid)}" onclick="navigateToPlayer(this.dataset.id)">${name}</span>`
+            : `<span class="flex-1 text-sm font-medium">${name}</span>`;
+        return `<div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+            <img src="${escAttr(p.image || '')}" class="w-8 h-8 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">
+            <span class="w-8 flex-shrink-0"></span>
+            ${nameEl}
+            ${role ? `<span class="text-xs text-gray-400">${role}</span>` : ''}
+        </div>`;
+    };
+
     let html = `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
         <h3 class="text-lg font-semibold mb-4">${escHtml(teamName)}</h3>`;
 
@@ -796,7 +820,11 @@ function renderLineup(players, teamName, teamLogo) {
     }
     if (bench.length) {
         html += `<div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Bench</div>
-            <div>${bench.map(renderPlayer).join('')}</div>`;
+            <div class="mb-4">${bench.map(renderPlayer).join('')}</div>`;
+    }
+    if (staff.length) {
+        html += `<div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Staff</div>
+            <div>${staff.map(renderStaff).join('')}</div>`;
     }
 
     return html + '</div>';
@@ -1018,14 +1046,45 @@ function leagueSortKey(name) {
 async function renderPlayerDetail(playerId) {
     const cached = playerCache[playerId] || {};
     const fullName = cached.first_name ? `${cached.first_name} ${cached.last_name}` : 'Player';
-    const pos = cached.is_goalkeeper ? 'GK' : (cached.field_role || cached.position || '');
+    const isStaffMember = cached.isStaffMember || false;
+    const roleSlug = cached.role_slug || '';
+    const pos = isStaffMember
+        ? roleSlug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        : (cached.is_goalkeeper ? 'GK' : (cached.field_role || ''));
+
+    // Match stats from cache
+    const goals = (cached.has_goals && cached.goals) ? cached.goals : [];
+    const cards = (cached.has_cards && cached.cards) ? cached.cards : [];
+
+    const goalMinutes = goals.map(g => {
+        const min = g.minute || g.time || g.minute_of_play || '';
+        const type = (g.type || g.goal_type || '').toLowerCase();
+        const label = type.includes('penalty') ? 'pen' : type.includes('own') ? 'og' : '';
+        return min ? `${min}'${label ? ' (' + label + ')' : ''}` : label || '⚽';
+    }).join(', ');
+
+    const cardItems = cards.map(c => {
+        const ct = (c.final_card_type || c.first_card_type || c.type || c.card_type || '').toLowerCase();
+        const min = c.minute || c.time || '';
+        const colour = ct.includes('yellow') ? 'bg-yellow-400' : 'bg-red-600';
+        return `<span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-4 ${colour} rounded-sm"></span>${min ? `<span class="text-xs text-gray-500">${escHtml(String(min))}'</span>` : ''}</span>`;
+    }).join(' ');
+
+    const matchStatsHtml = (goals.length || cards.length) ? `
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">This Match</div>
+            <div class="flex gap-6 text-sm">
+                ${goals.length ? `<div><span class="text-gray-500">Goals</span><div class="font-semibold mt-1">${escHtml(goalMinutes)}</div></div>` : ''}
+                ${cards.length ? `<div><span class="text-gray-500">Cards</span><div class="mt-1 flex gap-1">${cardItems}</div></div>` : ''}
+            </div>
+        </div>` : '';
 
     showDetailView(`
         <div class="max-w-2xl mx-auto">
             <button onclick="history.back()" class="mb-4 text-blue-600 hover:underline text-sm">&larr; Back</button>
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                 <div class="flex items-center gap-4 mb-4">
-                    ${cached.image ? `<img src="${escAttr(cached.image)}" class="w-16 h-16 rounded-full object-cover bg-gray-100">` : ''}
+                    ${cached.image ? `<img src="${escAttr(cached.image)}" class="w-16 h-16 rounded-full object-cover bg-gray-100">` : '<div class="w-16 h-16 rounded-full bg-gray-100 flex-shrink-0"></div>'}
                     <div>
                         <h2 class="text-2xl font-bold">${escHtml(fullName)}</h2>
                         ${cached.teamName ? `<div class="text-gray-500 text-sm mt-1 flex items-center gap-2">
@@ -1034,14 +1093,15 @@ async function renderPlayerDetail(playerId) {
                         </div>` : ''}
                     </div>
                 </div>
-                <div class="flex gap-6 text-sm">
-                    ${pos ? `<div><span class="text-gray-500">Position</span><div class="font-semibold">${escHtml(pos)}</div></div>` : ''}
-                    ${cached.jersey ? `<div><span class="text-gray-500">Jersey</span><div class="font-semibold">#${escHtml(String(cached.jersey))}</div></div>` : ''}
-                    ${cached.is_captain ? `<div><span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-2 py-1">Captain</span></div>` : ''}
+                <div class="flex flex-wrap gap-6 text-sm">
+                    ${pos ? `<div><span class="text-gray-500">${isStaffMember ? 'Role' : 'Position'}</span><div class="font-semibold">${escHtml(pos)}</div></div>` : ''}
+                    ${!isStaffMember && cached.jersey ? `<div><span class="text-gray-500">Jersey</span><div class="font-semibold">#${escHtml(String(cached.jersey))}</div></div>` : ''}
+                    ${cached.is_captain ? `<div class="self-end"><span class="text-xs font-bold text-yellow-600 border border-yellow-400 rounded px-2 py-1">Captain</span></div>` : ''}
                 </div>
             </div>
+            ${matchStatsHtml}
             <div id="player-api-section">
-                <div class="text-center py-4 text-gray-400 text-sm">Loading player profile...</div>
+                <div class="text-center py-4 text-gray-400 text-sm">Loading profile...</div>
             </div>
         </div>
     `);
