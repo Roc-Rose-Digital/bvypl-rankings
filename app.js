@@ -1515,71 +1515,51 @@ async function populateSquadAndStats(clubName) {
         return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2]);
     });
 
-    // Render Team Stats
-    const statsEl = document.getElementById('team-stats-section');
-    if (statsEl) {
-        let html = '<div class="bg-white rounded-lg shadow-md p-6 mb-6"><h3 class="text-lg font-bold mb-4">Team Stats</h3>';
-        for (const teamName of sortedTeams) {
-            const d = teamData[teamName];
-            if (!isSingle) html += `<div class="text-sm font-semibold text-gray-500 mb-2 mt-4">${escHtml(teamName)}</div>`;
-            html += `<div class="flex flex-wrap gap-6 text-center mb-4">
-                <div><div class="text-2xl font-bold">${d.gamesPlayed}</div><div class="text-xs text-gray-500 mt-1">Played</div></div>
-                <div><div class="text-2xl font-bold text-green-600">${d.goalsFor}</div><div class="text-xs text-gray-500 mt-1">Goals For</div></div>
-                <div><div class="text-2xl font-bold text-red-500">${d.goalsAgainst}</div><div class="text-xs text-gray-500 mt-1">Goals Against</div></div>
-                <div><div class="text-2xl font-bold">${d.cleanSheets}</div><div class="text-xs text-gray-500 mt-1">Clean Sheets</div></div>
-                <div><div class="text-2xl font-bold flex justify-center gap-1 items-center"><span class="inline-block w-4 h-5 bg-yellow-400 rounded-sm"></span>${d.yellows}</div><div class="text-xs text-gray-500 mt-1">Yellow Cards</div></div>
-                <div><div class="text-2xl font-bold flex justify-center gap-1 items-center"><span class="inline-block w-4 h-5 bg-red-600 rounded-sm"></span>${d.reds}</div><div class="text-xs text-gray-500 mt-1">Red Cards</div></div>
-            </div>`;
-        }
-        html += '</div>';
-        statsEl.innerHTML = html;
-    }
+    const renderTeamPanel = (teamName, d) => {
+        const topScorers = [...d.players].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
+        const scorersHtml = topScorers.length ? `
+            <div class="mb-6">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Top Scorers</div>
+                ${topScorers.map((p, i) => `
+                    <div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                        <span class="text-xs text-gray-400 w-5 text-right flex-shrink-0">${i + 1}</span>
+                        ${p.image ? `<img src="${escAttr(p.image)}" class="w-7 h-7 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0"></div>'}
+                        <span class="flex-1 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</span>
+                        <span class="text-sm">${'⚽'.repeat(Math.min(p.goals, 5))}${p.goals > 5 ? `<span class="text-xs text-gray-500"> ×${p.goals}</span>` : ''}</span>
+                    </div>`).join('')}
+            </div>` : '';
 
-    // Render Squad + Top Scorers
-    const squadEl = document.getElementById('team-squad-section');
-    if (squadEl) {
-        let html = '';
-        for (const teamName of sortedTeams) {
-            const d = teamData[teamName];
-            if (!d.players.length) continue;
-            const topScorers = [...d.players].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
-            const sectionHeader = isSingle ? '' : `<h4 class="text-base font-semibold text-gray-700 mb-3">${escHtml(teamName)}</h4>`;
+        const squadRows = d.players.map(p => `
+            <tr class="stripe-row border-b border-gray-100 last:border-0">
+                <td class="py-3 pr-2 w-8">
+                    ${p.image ? `<img src="${escAttr(p.image)}" class="w-8 h-8 rounded-full object-cover bg-gray-100" onerror="this.style.display='none'">` : '<div class="w-8 h-8 rounded-full bg-gray-100"></div>'}
+                </td>
+                <td class="py-3 pr-4 text-xs text-gray-400 w-10 text-right">${p.jersey ? escHtml(p.jersey) : ''}</td>
+                <td class="py-3 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</td>
+                <td class="py-3 text-center text-sm text-gray-700 w-16 font-semibold">${p.appearances}</td>
+                <td class="py-3 text-center w-24">${p.goals ? `<span class="text-sm">${'⚽'.repeat(Math.min(p.goals, 3))}${p.goals > 3 ? `<span class="text-xs text-gray-500"> ×${p.goals}</span>` : ''}</span>` : '<span class="text-gray-300 text-xs">—</span>'}</td>
+                <td class="py-3 text-center w-24">
+                    <div class="flex items-center justify-center gap-1">
+                    ${p.yellows ? `<span class="inline-flex items-center gap-0.5"><span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm"></span><span class="text-xs text-gray-500">${p.yellows > 1 ? p.yellows : ''}</span></span>` : ''}
+                    ${p.reds ? `<span class="inline-flex items-center gap-0.5"><span class="inline-block w-3 h-4 bg-red-600 rounded-sm"></span><span class="text-xs text-gray-500">${p.reds > 1 ? p.reds : ''}</span></span>` : ''}
+                    ${!p.yellows && !p.reds ? '<span class="text-gray-300 text-xs">—</span>' : ''}
+                    </div>
+                </td>
+            </tr>`).join('');
 
-            // Top scorers
-            const scorersHtml = topScorers.length ? `
-                <div class="mb-6">
-                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Top Scorers</div>
-                    ${topScorers.map((p, i) => `
-                        <div class="stripe-row flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                            <span class="text-xs text-gray-400 w-5 text-right flex-shrink-0">${i + 1}</span>
-                            ${p.image ? `<img src="${escAttr(p.image)}" class="w-7 h-7 rounded-full object-cover bg-gray-100 flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0"></div>'}
-                            <span class="flex-1 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</span>
-                            <span class="text-sm">${'⚽'.repeat(Math.min(p.goals, 5))}${p.goals > 5 ? `<span class="text-xs text-gray-500"> ×${p.goals}</span>` : ''}</span>
-                        </div>`).join('')}
-                </div>` : '';
-
-            // Squad table
-            const squadRows = d.players.map(p => `
-                <tr class="stripe-row border-b border-gray-100 last:border-0">
-                    <td class="py-3 pr-2 w-8">
-                        ${p.image ? `<img src="${escAttr(p.image)}" class="w-8 h-8 rounded-full object-cover bg-gray-100" onerror="this.style.display='none'">` : '<div class="w-8 h-8 rounded-full bg-gray-100"></div>'}
-                    </td>
-                    <td class="py-3 pr-4 text-xs text-gray-400 w-10 text-right">${p.jersey ? escHtml(p.jersey) : ''}</td>
-                    <td class="py-3 text-sm font-medium cursor-pointer text-blue-700 hover:underline" data-id="${escAttr(p.pid)}" onclick="navigateToPlayer(this.dataset.id)">${escHtml(p.name)}</td>
-                    <td class="py-3 text-center text-sm text-gray-700 w-16 font-semibold">${p.appearances}</td>
-                    <td class="py-3 text-center w-24">${p.goals ? `<span class="text-sm">${'⚽'.repeat(Math.min(p.goals, 3))}${p.goals > 3 ? `<span class="text-xs text-gray-500"> ×${p.goals}</span>` : ''}</span>` : '<span class="text-gray-300 text-xs">—</span>'}</td>
-                    <td class="py-3 text-center w-24">
-                        <div class="flex items-center justify-center gap-1">
-                        ${p.yellows ? `<span class="inline-flex items-center gap-0.5"><span class="inline-block w-3 h-4 bg-yellow-400 rounded-sm"></span><span class="text-xs text-gray-500">${p.yellows > 1 ? p.yellows : ''}</span></span>` : ''}
-                        ${p.reds ? `<span class="inline-flex items-center gap-0.5"><span class="inline-block w-3 h-4 bg-red-600 rounded-sm"></span><span class="text-xs text-gray-500">${p.reds > 1 ? p.reds : ''}</span></span>` : ''}
-                        ${!p.yellows && !p.reds ? '<span class="text-gray-300 text-xs">—</span>' : ''}
-                        </div>
-                    </td>
-                </tr>`).join('');
-
-            html += `<div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                ${sectionHeader}
+        return `
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-base font-semibold text-gray-700 mb-4">Team Stats</h3>
+                <div class="flex flex-wrap gap-6 text-center mb-6">
+                    <div><div class="text-2xl font-bold">${d.gamesPlayed}</div><div class="text-xs text-gray-500 mt-1">Played</div></div>
+                    <div><div class="text-2xl font-bold text-green-600">${d.goalsFor}</div><div class="text-xs text-gray-500 mt-1">Goals For</div></div>
+                    <div><div class="text-2xl font-bold text-red-500">${d.goalsAgainst}</div><div class="text-xs text-gray-500 mt-1">Goals Against</div></div>
+                    <div><div class="text-2xl font-bold">${d.cleanSheets}</div><div class="text-xs text-gray-500 mt-1">Clean Sheets</div></div>
+                    <div><div class="text-2xl font-bold flex justify-center gap-1 items-center"><span class="inline-block w-4 h-5 bg-yellow-400 rounded-sm"></span>${d.yellows}</div><div class="text-xs text-gray-500 mt-1">Yellow Cards</div></div>
+                    <div><div class="text-2xl font-bold flex justify-center gap-1 items-center"><span class="inline-block w-4 h-5 bg-red-600 rounded-sm"></span>${d.reds}</div><div class="text-xs text-gray-500 mt-1">Red Cards</div></div>
+                </div>
                 ${scorersHtml}
+                ${d.players.length ? `
                 <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Squad</div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
@@ -1593,10 +1573,50 @@ async function populateSquadAndStats(clubName) {
                         </tr></thead>
                         <tbody>${squadRows}</tbody>
                     </table>
-                </div>
+                </div>` : ''}
             </div>`;
+    };
+
+    const statsEl = document.getElementById('team-stats-section');
+    const squadEl = document.getElementById('team-squad-section');
+    if (squadEl) squadEl.innerHTML = '';
+
+    if (statsEl) {
+        if (isSingle) {
+            const d = teamData[sortedTeams[0]];
+            statsEl.innerHTML = d ? renderTeamPanel(sortedTeams[0], d) : '';
+        } else {
+            const tabLabel = name => name.match(/U\d+|Seniors|Reserves/i)?.[0] || name;
+            const tabBtns = sortedTeams.map((name, i) =>
+                `<button id="squad-stab-btn-${i}" onclick="showSquadSubTab(${i})"
+                    class="px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${i === 0 ? 'tab-active border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-blue-600'}"
+                >${escHtml(tabLabel(name))}</button>`
+            ).join('');
+            const panels = sortedTeams.map((name, i) => {
+                const d = teamData[name];
+                return `<div id="squad-stab-panel-${i}" ${i > 0 ? 'class="hidden"' : ''}>${d ? renderTeamPanel(name, d) : ''}</div>`;
+            }).join('');
+            statsEl.innerHTML = `
+                <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                    <div class="flex overflow-x-auto border-b border-gray-200 px-2">${tabBtns}</div>
+                </div>
+                ${panels}`;
         }
-        squadEl.innerHTML = html || '';
+    }
+}
+
+function showSquadSubTab(idx) {
+    document.querySelectorAll('[id^="squad-stab-panel-"]').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('[id^="squad-stab-btn-"]').forEach(btn => {
+        btn.classList.remove('tab-active', 'border-blue-600', 'text-blue-600');
+        btn.classList.add('border-transparent', 'text-gray-500');
+    });
+    const panel = document.getElementById('squad-stab-panel-' + idx);
+    const btn = document.getElementById('squad-stab-btn-' + idx);
+    if (panel) panel.classList.remove('hidden');
+    if (btn) {
+        btn.classList.remove('border-transparent', 'text-gray-500');
+        btn.classList.add('tab-active', 'border-blue-600', 'text-blue-600');
     }
 }
 
