@@ -97,10 +97,16 @@ async function loadDivisionData(divisionId) {
     try {
         const leaguesJson = await fetch(`${baseUrl}/list/leagues?season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX`).then(r => r.json());
         const leagues = leaguesJson.data || [];
-        const [results, fixtures] = await Promise.all([
-            Promise.all(leagues.map(l => fetchAllPagesForLeague('results', l.id, divisionId))).then(a => a.flat()),
-            Promise.all(leagues.map(l => fetchAllPagesForLeague('fixtures', l.id, divisionId))).then(a => a.flat())
-        ]);
+        async function batchFetch(endpoint, batchSize = 8) {
+            const out = [];
+            for (let i = 0; i < leagues.length; i += batchSize) {
+                const batch = leagues.slice(i, i + batchSize);
+                const res = await Promise.all(batch.map(l => fetchAllPagesForLeague(endpoint, l.id, divisionId)));
+                out.push(...res.flat());
+            }
+            return out;
+        }
+        const [results, fixtures] = await Promise.all([batchFetch('results'), batchFetch('fixtures')]);
         divisionCache[divisionId] = { leagues, results, fixtures };
     } catch (e) {
         divisionCache[divisionId] = { leagues: [], results: [], fixtures: [] };
@@ -170,21 +176,25 @@ async function loadData(gender = 'boys', divisionId = null) {
             return allData;
         }
         
-        // Fetch all fixtures with pagination
-        const fixturesPromises = leagueIds.map(leagueId => fetchAllPages('fixtures', leagueId));
-        const resultsPromises = leagueIds.map(leagueId => fetchAllPages('results', leagueId));
-        
-        const fixturesArrays = await Promise.all(fixturesPromises);
-        const resultsArrays = await Promise.all(resultsPromises);
-        
-        // Combine all fixtures and results
-        fixturesData = fixturesArrays.flat();
-        resultsData = resultsArrays.flat();
+        // Fetch fixtures and results in batches to avoid flooding the API
+        async function fetchBatched(endpoint, ids, batchSize = 8) {
+            const results = [];
+            for (let i = 0; i < ids.length; i += batchSize) {
+                const batch = ids.slice(i, i + batchSize);
+                const batchResults = await Promise.all(batch.map(id => fetchAllPages(endpoint, id)));
+                results.push(...batchResults);
+            }
+            return results.flat();
+        }
+
+        const [fixturesData_, resultsData_] = await Promise.all([
+            fetchBatched('fixtures', leagueIds),
+            fetchBatched('results', leagueIds),
+        ]);
+
+        fixturesData = fixturesData_;
+        resultsData = resultsData_;
         divisionCache[divisionId] = { leagues: leaguesData, results: resultsData, fixtures: fixturesData };
-        
-        console.log(`Loaded ${leaguesData.length} leagues`);
-        console.log(`Loaded ${fixturesData.length} fixtures`);
-        console.log(`Loaded ${resultsData.length} results`);
 
         initializeApp();
     } catch (error) {
