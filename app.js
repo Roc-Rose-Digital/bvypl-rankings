@@ -63,7 +63,7 @@ const divisions = {
 
 const divisionCache = {};
 
-async function fetchAllPagesForLeague(endpoint, leagueId, divisionId) {
+async function fetchAllCompetitionPages(endpoint, divisionId) {
     const baseUrl = 'https://mc-api.dribl.com/api';
     const params = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
     let allData = [];
@@ -71,19 +71,13 @@ async function fetchAllPagesForLeague(endpoint, leagueId, divisionId) {
     let hasMore = true;
     while (hasMore) {
         const cursorPart = cursor ? `&cursor=${cursor}` : '';
-        const url = `${baseUrl}/${endpoint}?${params}&league=${leagueId}${cursorPart}`;
+        const url = `${baseUrl}/${endpoint}?${params}${cursorPart}`;
         try {
             const response = await fetch(url);
             const json = await response.json();
             if (json.data && json.data.length > 0) allData = allData.concat(json.data);
-            const meta = json.meta || {};
-            if (endpoint === 'results' && meta.prev_cursor) {
-                cursor = meta.prev_cursor;
-            } else if (endpoint === 'fixtures' && meta.next_cursor) {
-                cursor = meta.next_cursor;
-            } else {
-                hasMore = false;
-            }
+            cursor = (json.meta || {}).next_cursor || null;
+            hasMore = !!cursor;
         } catch (err) {
             hasMore = false;
         }
@@ -97,16 +91,10 @@ async function loadDivisionData(divisionId) {
     try {
         const leaguesJson = await fetch(`${baseUrl}/list/leagues?season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX`).then(r => r.json());
         const leagues = leaguesJson.data || [];
-        async function batchFetch(endpoint, batchSize = 8) {
-            const out = [];
-            for (let i = 0; i < leagues.length; i += batchSize) {
-                const batch = leagues.slice(i, i + batchSize);
-                const res = await Promise.all(batch.map(l => fetchAllPagesForLeague(endpoint, l.id, divisionId)));
-                out.push(...res.flat());
-            }
-            return out;
-        }
-        const [results, fixtures] = await Promise.all([batchFetch('results'), batchFetch('fixtures')]);
+        const [results, fixtures] = await Promise.all([
+            fetchAllCompetitionPages('results', divisionId),
+            fetchAllCompetitionPages('fixtures', divisionId),
+        ]);
         divisionCache[divisionId] = { leagues, results, fixtures };
     } catch (e) {
         divisionCache[divisionId] = { leagues: [], results: [], fixtures: [] };
@@ -131,7 +119,6 @@ async function loadData(gender = 'boys', divisionId = null) {
         document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${allDivisions[divisionId].fullName} data from API...</div>`;
         
         const baseUrl = 'https://mc-api.dribl.com/api';
-        const params = `date_range=default&season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
         
         // Fetch leagues from API and rounds from local file
         const [leagues, rounds] = await Promise.all([
@@ -142,54 +129,10 @@ async function loadData(gender = 'boys', divisionId = null) {
         leaguesData = leagues.data || [];
         roundsData = rounds || [];
         
-        // Fetch fixtures and results for each league with pagination
-        const leagueIds = leaguesData.map(l => l.id);
-        
-        // Helper function to fetch all pages.
-        // Dribl returns results newest-first (follow prev_cursor for history).
-        // Fixtures are returned oldest-first (follow next_cursor for more upcoming).
-        // Neither uses date_range so we get the full season.
-        async function fetchAllPages(endpoint, leagueId) {
-            const epParams = `season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX&timezone=Australia/Sydney`;
-            let allData = [];
-            let cursor = null;
-            let hasMore = true;
-            while (hasMore) {
-                const cursorPart = cursor ? `&cursor=${cursor}` : '';
-                const url = `${baseUrl}/${endpoint}?${epParams}&league=${leagueId}${cursorPart}`;
-                try {
-                    const response = await fetch(url);
-                    const json = await response.json();
-                    if (json.data && json.data.length > 0) allData = allData.concat(json.data);
-                    const meta = json.meta || {};
-                    if (endpoint === 'results' && meta.prev_cursor) {
-                        cursor = meta.prev_cursor;
-                    } else if (endpoint === 'fixtures' && meta.next_cursor) {
-                        cursor = meta.next_cursor;
-                    } else {
-                        hasMore = false;
-                    }
-                } catch (err) {
-                    hasMore = false;
-                }
-            }
-            return allData;
-        }
-        
-        // Fetch fixtures and results in batches to avoid flooding the API
-        async function fetchBatched(endpoint, ids, batchSize = 8) {
-            const results = [];
-            for (let i = 0; i < ids.length; i += batchSize) {
-                const batch = ids.slice(i, i + batchSize);
-                const batchResults = await Promise.all(batch.map(id => fetchAllPages(endpoint, id)));
-                results.push(...batchResults);
-            }
-            return results.flat();
-        }
-
+        // Fetch all fixtures and results for the competition using competition-level pagination
         const [fixturesData_, resultsData_] = await Promise.all([
-            fetchBatched('fixtures', leagueIds),
-            fetchBatched('results', leagueIds),
+            fetchAllCompetitionPages('fixtures', divisionId),
+            fetchAllCompetitionPages('results', divisionId),
         ]);
 
         fixturesData = fixturesData_;
