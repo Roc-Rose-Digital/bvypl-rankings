@@ -63,7 +63,7 @@
         <!-- Navigation Tabs -->
         <nav class="bg-white shadow-md sticky top-0 z-10">
             <div class="container mx-auto px-4">
-                <div class="flex overflow-x-auto">
+                <div class="flex overflow-x-auto items-center gap-2">
                     <button onclick="showTab('combined')" id="tab-combined" class="py-4 px-3 sm:px-4 whitespace-nowrap tab-active text-sm sm:text-base">
                         Combined Club Ladder
                     </button>
@@ -79,6 +79,15 @@
                     <button onclick="showTab('stats')" id="tab-stats" class="py-4 px-3 sm:px-4 whitespace-nowrap hover:text-blue-600 text-sm sm:text-base">
                         Stats
                     </button>
+                    <div class="ml-auto flex-shrink-0 pr-1">
+                        <button onclick="toggleSearch()" class="py-2 px-3 text-gray-500 hover:text-blue-600 text-lg" title="Search teams">&#128269;</button>
+                    </div>
+                </div>
+                <div id="search-bar" class="hidden border-t border-gray-100 py-2 relative">
+                    <input id="search-input" type="text" placeholder="Search teams..." autocomplete="off"
+                           class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                           oninput="handleSearch(this.value)" onkeydown="if(event.key==='Escape')toggleSearch()">
+                    <div id="search-results" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50 max-h-72 overflow-y-auto hidden"></div>
                 </div>
             </div>
         </nav>
@@ -193,7 +202,8 @@
         <!-- Footer -->
         <footer class="bg-gray-800 text-white mt-12 py-6">
             <div class="container mx-auto px-4 text-center">
-                <p class="text-gray-400">Data from Dribl API - Data from Football Victoria API | 2026 Season</p>
+                <p class="text-gray-400">Football Victoria | 2026 Season</p>
+                <p class="text-gray-500 text-sm mt-1">Data last updated: <span id="last-updated-time">—</span></p>
             </div>
         </footer>
     </div>

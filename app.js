@@ -6,6 +6,19 @@ let roundsData = [];
 let currentGender = 'boys'; // kept for compatibility but unused
 let currentDivision = 'bgdMX6MDKE'; // Default to Boys YPL1
 
+// Favourites — persisted in localStorage as a JSON array of club names
+function getFavourites() {
+    try { return JSON.parse(localStorage.getItem('vpl_favourites') || '[]'); } catch { return []; }
+}
+function isFavourite(clubName) { return getFavourites().includes(clubName); }
+function toggleFavourite(clubName) {
+    const favs = getFavourites();
+    const idx = favs.indexOf(clubName);
+    if (idx === -1) favs.push(clubName); else favs.splice(idx, 1);
+    localStorage.setItem('vpl_favourites', JSON.stringify(favs));
+    return favs.includes(clubName);
+}
+
 // Division configuration grouped by tier for dropdown rendering
 const divisionGroups = [
     {
@@ -118,8 +131,18 @@ async function loadData(gender = 'boys', divisionId = null) {
         // Show loading message
         document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${allDivisions[divisionId].fullName}...</div>`;
 
-        const rounds = await fetch('api-responses/rounds-api.json').then(r => r.json()).catch(() => []);
+        const [rounds, lastUpdated] = await Promise.all([
+            fetch('api-responses/rounds-api.json').then(r => r.json()).catch(() => []),
+            fetch('data/last-updated.json').then(r => r.json()).catch(() => null),
+        ]);
         roundsData = rounds || [];
+        if (lastUpdated?.updatedAt) {
+            const el = document.getElementById('last-updated-time');
+            if (el) {
+                const d = new Date(lastUpdated.updatedAt);
+                el.textContent = d.toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Australia/Sydney' }) + ' AEST';
+            }
+        }
 
         // Try static pre-fetched data first; fall back to live API
         let divData = null;
@@ -292,6 +315,76 @@ function updateCombinedTabVisibility() {
     });
 
     showTab(fixturesOnly ? 'fixtures' : hasCombined ? 'combined' : 'ladders');
+}
+
+function handleFavouriteToggle(clubName) {
+    const isFav = toggleFavourite(clubName);
+    const btn = document.getElementById('fav-btn');
+    if (btn) {
+        btn.innerHTML = isFav ? '&#11088;' : '&#9734;';
+        btn.title = isFav ? 'Remove from favourites' : 'Add to favourites';
+    }
+    // Highlight favourite rows in visible ladders
+    highlightFavouriteRows();
+}
+
+function highlightFavouriteRows() {
+    const favs = getFavourites();
+    document.querySelectorAll('.ladder-row[data-club]').forEach(row => {
+        const isFav = favs.includes(row.dataset.club);
+        row.classList.toggle('ring-2', isFav);
+        row.classList.toggle('ring-yellow-400', isFav);
+        row.classList.toggle('ring-inset', isFav);
+    });
+}
+
+function toggleSearch() {
+    const bar = document.getElementById('search-bar');
+    const input = document.getElementById('search-input');
+    const results = document.getElementById('search-results');
+    if (bar.classList.toggle('hidden')) {
+        input.value = '';
+        results.classList.add('hidden');
+    } else {
+        input.focus();
+    }
+}
+
+function handleSearch(query) {
+    const results = document.getElementById('search-results');
+    const q = query.trim().toLowerCase();
+    if (!q) { results.classList.add('hidden'); return; }
+
+    // Collect unique club names from resultsData + fixturesData
+    const seen = new Set();
+    const clubs = [];
+    [...resultsData, ...fixturesData].forEach(item => {
+        const a = item.attributes;
+        [a.home_team_name, a.away_team_name].forEach(name => {
+            if (!name) return;
+            const club = getClubName(name);
+            if (club && !seen.has(club) && club.toLowerCase().includes(q)) {
+                seen.add(club);
+                clubs.push({ club, logo: a.home_team_name === name ? a.home_logo : a.away_logo });
+            }
+        });
+    });
+
+    clubs.sort((a, b) => a.club.localeCompare(b.club));
+
+    if (!clubs.length) {
+        results.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">No teams found</div>';
+        results.classList.remove('hidden');
+        return;
+    }
+
+    results.innerHTML = clubs.map(c => `
+        <div class="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+             onclick="toggleSearch(); navigateToTeam('${escAttr(c.club)}')">
+            <img src="${escAttr(c.logo || '')}" class="w-6 h-6 object-contain flex-shrink-0" onerror="this.style.display='none'">
+            <span class="text-sm font-medium text-blue-700">${escHtml(c.club)}</span>
+        </div>`).join('');
+    results.classList.remove('hidden');
 }
 
 function showTab(tabName) {
@@ -781,6 +874,57 @@ function renderMatchCentre(data) {
         html += `</div></div>`;
     }
 
+    // Head-to-head (from resultsData, same club names across all leagues)
+    const homeClub = getClubName(a.home_team_name || '');
+    const awayClub = getClubName(a.away_team_name || '');
+    if (homeClub && awayClub) {
+        const h2h = resultsData
+            .filter(r => {
+                const ra = r.attributes;
+                if (ra.status !== 'complete') return false;
+                const rHome = getClubName(ra.home_team_name);
+                const rAway = getClubName(ra.away_team_name);
+                return (rHome === homeClub && rAway === awayClub) || (rHome === awayClub && rAway === homeClub);
+            })
+            .sort((x, y) => new Date(y.attributes.date) - new Date(x.attributes.date))
+            .slice(0, 10);
+        if (h2h.length) {
+            let homeW = 0, awayW = 0, draws = 0;
+            h2h.forEach(r => {
+                const ra = r.attributes;
+                const isHomePov = getClubName(ra.home_team_name) === homeClub;
+                const hs = isHomePov ? ra.home_score : ra.away_score;
+                const as_ = isHomePov ? ra.away_score : ra.home_score;
+                if (hs > as_) homeW++; else if (as_ > hs) awayW++; else draws++;
+            });
+            html += `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
+                <h3 class="text-lg font-semibold mb-3">Head-to-Head</h3>
+                <div class="flex justify-around text-center mb-4 py-2 bg-gray-50 rounded">
+                    <div><div class="text-xl font-bold text-green-600">${homeW}</div><div class="text-xs text-gray-500 mt-0.5">${escHtml(homeClub)}</div></div>
+                    <div><div class="text-xl font-bold text-gray-400">${draws}</div><div class="text-xs text-gray-500 mt-0.5">Draws</div></div>
+                    <div><div class="text-xl font-bold text-green-600">${awayW}</div><div class="text-xs text-gray-500 mt-0.5">${escHtml(awayClub)}</div></div>
+                </div>
+                <div>`;
+            h2h.forEach(r => {
+                const ra = r.attributes;
+                const isHomePov = getClubName(ra.home_team_name) === homeClub;
+                const hScore = isHomePov ? ra.home_score : ra.away_score;
+                const aScore = isHomePov ? ra.away_score : ra.home_score;
+                const rDate = new Date(ra.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: '2-digit' });
+                const outcome = hScore > aScore ? 'W' : hScore < aScore ? 'L' : 'D';
+                const outCls = outcome === 'W' ? 'bg-green-100 text-green-700' : outcome === 'L' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500';
+                html += `<div class="stripe-row flex items-center gap-2 py-2 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-blue-50"
+                              onclick="navigateToMatch('${escAttr(r.hash_id)}','result')">
+                    <span class="text-xs text-gray-400 w-16 flex-shrink-0">${rDate}</span>
+                    <span class="flex-1 text-xs text-gray-500 truncate">${escHtml(ra.league_name)}</span>
+                    <span class="text-sm font-bold tabular-nums">${hScore}–${aScore}</span>
+                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded ${outCls} w-5 text-center flex-shrink-0">${outcome}</span>
+                </div>`;
+            });
+            html += `</div></div>`;
+        }
+    }
+
     // Officials
     const refs = a.referees || [];
     if (refs.length) {
@@ -800,6 +944,56 @@ function renderMatchCentre(data) {
         html += `</div></div>`;
     }
 
+    return html;
+}
+
+function renderStandingsAtMatch(matchAttrs) {
+    const leagueName = matchAttrs.league_name;
+    if (!leagueName) return '';
+    const matchDate = new Date(matchAttrs.date);
+    const homeClub = getClubName(matchAttrs.home_team_name || '');
+    const awayClub = getClubName(matchAttrs.away_team_name || '');
+
+    // Results in this league before this match
+    const priorResults = resultsData.filter(r => {
+        const ra = r.attributes;
+        return ra.league_name === leagueName
+            && ra.status === 'complete'
+            && new Date(ra.date) < matchDate;
+    });
+
+    if (!priorResults.length) return '';
+
+    const ladder = calculateLadder(leagueName, priorResults);
+    if (!ladder.length) return '';
+
+    let html = `<div class="bg-white rounded-lg shadow-md p-6 mb-4">
+        <h3 class="text-lg font-semibold mb-3">Standings Before Match</h3>
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="py-2 pl-2 pr-1 text-left text-xs font-semibold text-gray-500 uppercase w-6">#</th>
+                    <th class="py-2 px-2 text-left text-xs font-semibold text-gray-500 uppercase">Team</th>
+                    <th class="py-2 px-2 text-center text-xs font-semibold text-gray-500 uppercase">P</th>
+                    <th class="py-2 px-2 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">GD</th>
+                    <th class="py-2 px-2 text-center text-xs font-semibold text-gray-500 uppercase">Pts</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    ladder.forEach((team, i) => {
+        const club = getClubName(team.name);
+        const isMatch = club === homeClub || club === awayClub;
+        const rowCls = isMatch ? 'bg-blue-50 font-semibold' : (i % 2 === 1 ? 'bg-gray-50' : '');
+        html += `<tr class="${rowCls}">
+            <td class="py-1.5 pl-2 pr-1 text-gray-400">${i + 1}</td>
+            <td class="py-1.5 px-2 cursor-pointer hover:text-blue-600" onclick="navigateToTeam('${escAttr(club)}')">${escHtml(team.name)}</td>
+            <td class="py-1.5 px-2 text-center">${team.played}</td>
+            <td class="py-1.5 px-2 text-center hidden sm:table-cell ${team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
+            <td class="py-1.5 px-2 text-center font-bold text-blue-600">${team.points}</td>
+        </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
     return html;
 }
 
@@ -981,7 +1175,10 @@ async function renderMatchDetail(id, type) {
     const homeEl = document.getElementById('match-panel-home');
     const awayEl = document.getElementById('match-panel-away');
 
-    if (summaryEl) summaryEl.innerHTML = (centreResult && centreResult.data) ? renderMatchCentre(centreResult.data) : '<div class="text-center py-4 text-gray-400 text-sm">No match centre data available.</div>';
+    if (summaryEl) {
+        const centreHtml = (centreResult && centreResult.data) ? renderMatchCentre(centreResult.data) : '<div class="text-center py-4 text-gray-400 text-sm">No match centre data available.</div>';
+        summaryEl.innerHTML = centreHtml + renderStandingsAtMatch(attrs);
+    }
     if (homeEl) homeEl.innerHTML = homeResult ? renderLineup(homeResult, attrs.home_team_name, attrs.home_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
     if (awayEl) awayEl.innerHTML = awayResult ? renderLineup(awayResult, attrs.away_team_name, attrs.away_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
 
@@ -1033,6 +1230,43 @@ async function renderTeamDetail(clubName) {
 
 
 
+    const today = new Date();
+    const upcoming = fixturesData
+        .filter(f => {
+            const a = f.attributes;
+            return (getClubName(a.home_team_name) === clubName || getClubName(a.away_team_name) === clubName)
+                && new Date(a.date) >= today;
+        })
+        .sort((a, b) => new Date(a.attributes.date) - new Date(b.attributes.date));
+    const nextF = upcoming[0];
+    let nextFixtureHtml = '';
+    if (nextF) {
+        const fa = nextF.attributes;
+        const isHome = getClubName(fa.home_team_name) === clubName;
+        const opponent = isHome ? fa.away_team_name : fa.home_team_name;
+        const oppLogo = isHome ? fa.away_logo : fa.home_logo;
+        const fDate = new Date(fa.date);
+        const fDateStr = fDate.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+        const fTimeStr = fDate.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+        nextFixtureHtml = `
+            <div class="bg-white rounded-lg shadow-md p-4 mb-4 cursor-pointer hover:bg-blue-50"
+                 onclick="navigateToMatch('${escAttr(nextF.hash_id)}','fixture')">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Next Fixture</div>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="text-sm font-semibold text-gray-700">${isHome ? 'Home' : 'Away'}</div>
+                    <div class="flex items-center gap-3 flex-1 justify-center">
+                        <img src="${escAttr(oppLogo)}" alt="${escAttr(opponent)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                        <span class="font-bold text-blue-700 text-sm">${escHtml(opponent)}</span>
+                    </div>
+                    <div class="text-right text-sm text-gray-500 whitespace-nowrap">
+                        <div>${fDateStr}</div>
+                        <div>${fTimeStr}</div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-400 mt-2">${escHtml(fa.league_name)}${fa.ground_name ? ' · ' + escHtml(fa.ground_name) : ''}</div>
+            </div>`;
+    }
+
     const html = `
         <button onclick="history.back()" class="mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold text-sm">
             ← Back
@@ -1041,10 +1275,15 @@ async function renderTeamDetail(clubName) {
         <div class="bg-blue-600 text-white rounded-lg shadow-md p-6 mb-4">
             <div class="flex items-center gap-4">
                 ${logo ? `<img src="${escAttr(logo)}" alt="${escAttr(clubName)}" class="w-16 h-16 object-contain bg-white rounded p-1">` : ''}
-                <div>
+                <div class="flex-1">
                     <h2 class="text-2xl font-bold">${escHtml(clubName)}</h2>
                     <p class="text-blue-100">${escHtml(divisionName)} · 2026</p>
                 </div>
+                <button id="fav-btn" onclick="handleFavouriteToggle('${escAttr(clubName)}')"
+                        class="text-2xl transition-transform hover:scale-110 focus:outline-none"
+                        title="${isFavourite(clubName) ? 'Remove from favourites' : 'Add to favourites'}">
+                    ${isFavourite(clubName) ? '&#11088;' : '&#9734;'}
+                </button>
             </div>
         </div>
 
@@ -1058,6 +1297,7 @@ async function renderTeamDetail(clubName) {
         </div>
 
         <div id="team-panel-overview">
+            <div id="team-next-fixture-card">${nextFixtureHtml}</div>
             ${divisions.boys[currentDivision]?.combined ? `
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h3 class="text-lg font-bold mb-4">Season Summary</h3>
@@ -1333,6 +1573,7 @@ async function populateTeamBreakdown(clubName) {
                     <td class="py-2 px-4 text-center text-sm">${team.goalsAgainst}</td>
                     <td class="py-2 px-4 text-center text-sm font-semibold ${team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
                     <td class="py-2 px-4 text-center text-sm font-bold text-blue-600">${team.points}</td>
+                    <td class="py-2 px-4 hidden sm:table-cell"><div class="flex gap-1 justify-center">${formHtml(team.form)}</div></td>
                 </tr>`);
         });
     }
@@ -1355,6 +1596,7 @@ async function populateTeamBreakdown(clubName) {
                                 <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GA</th>
                                 <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GD</th>
                                 <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pts</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Form</th>
                             </tr>
                         </thead>
                         <tbody>${rows.join('')}</tbody>
@@ -1363,6 +1605,48 @@ async function populateTeamBreakdown(clubName) {
             </div>`;
     } else {
         el.innerHTML = '';
+    }
+
+    // Update next fixture card with cross-division data
+    const nfCard = document.getElementById('team-next-fixture-card');
+    if (nfCard) {
+        const allFixtures = Object.values(divisionCache).flatMap(d => d.fixtures || []);
+        const now = new Date();
+        const nextFAll = allFixtures
+            .filter(f => {
+                const a = f.attributes;
+                return (getClubName(a.home_team_name) === clubName || getClubName(a.away_team_name) === clubName)
+                    && new Date(a.date) >= now;
+            })
+            .sort((a, b) => new Date(a.attributes.date) - new Date(b.attributes.date))[0];
+        if (nextFAll) {
+            const fa = nextFAll.attributes;
+            const isHome = getClubName(fa.home_team_name) === clubName;
+            const opponent = isHome ? fa.away_team_name : fa.home_team_name;
+            const oppLogo = isHome ? fa.away_logo : fa.home_logo;
+            const fDate = new Date(fa.date);
+            const fDateStr = fDate.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+            const fTimeStr = fDate.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+            nfCard.innerHTML = `
+                <div class="bg-white rounded-lg shadow-md p-4 mb-4 cursor-pointer hover:bg-blue-50"
+                     onclick="navigateToMatch('${escAttr(nextFAll.hash_id)}','fixture')">
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Next Fixture</div>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="text-sm font-semibold text-gray-700">${isHome ? 'Home' : 'Away'}</div>
+                        <div class="flex items-center gap-3 flex-1 justify-center">
+                            <img src="${escAttr(oppLogo)}" alt="${escAttr(opponent)}" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+                            <span class="font-bold text-blue-700 text-sm">${escHtml(opponent)}</span>
+                        </div>
+                        <div class="text-right text-sm text-gray-500 whitespace-nowrap">
+                            <div>${fDateStr}</div>
+                            <div>${fTimeStr}</div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-2">${escHtml(fa.league_name)}${fa.ground_name ? ' · ' + escHtml(fa.ground_name) : ''}</div>
+                </div>`;
+        } else {
+            nfCard.innerHTML = '';
+        }
     }
 
     // Collect all results across divisions
@@ -1944,81 +2228,76 @@ function showStatsSubTab(key) {
 function calculateLadder(leagueName, results) {
     const data = results || resultsData;
     const teams = {};
+    const teamResults = {}; // teamName → [{date, outcome}]
 
-    // Process results for this league
-    data
+    const leagueResults = data
         .filter(result => result.attributes.league_name === leagueName)
-        .forEach(result => {
+        .sort((a, b) => new Date(a.attributes.date) - new Date(b.attributes.date));
+
+    leagueResults.forEach(result => {
             const attrs = result.attributes;
             const homeTeam = attrs.home_team_name;
             const awayTeam = attrs.away_team_name;
             const homeScore = attrs.home_score || 0;
             const awayScore = attrs.away_score || 0;
-            
-            // Initialize teams if not exists
-            if (!teams[homeTeam]) {
-                teams[homeTeam] = {
-                    name: homeTeam,
-                    logo: attrs.home_logo,
-                    played: 0,
-                    won: 0,
-                    drawn: 0,
-                    lost: 0,
-                    goalsFor: 0,
-                    goalsAgainst: 0,
-                    goalDifference: 0,
-                    points: 0
-                };
-            }
-            if (!teams[awayTeam]) {
-                teams[awayTeam] = {
-                    name: awayTeam,
-                    logo: attrs.away_logo,
-                    played: 0,
-                    won: 0,
-                    drawn: 0,
-                    lost: 0,
-                    goalsFor: 0,
-                    goalsAgainst: 0,
-                    goalDifference: 0,
-                    points: 0
-                };
-            }
-            
-            // Update stats
+
+            const init = (name, logo) => {
+                if (!teams[name]) {
+                    teams[name] = { name, logo, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 };
+                    teamResults[name] = [];
+                }
+            };
+            init(homeTeam, attrs.home_logo);
+            init(awayTeam, attrs.away_logo);
+
             teams[homeTeam].played++;
             teams[awayTeam].played++;
             teams[homeTeam].goalsFor += homeScore;
             teams[homeTeam].goalsAgainst += awayScore;
             teams[awayTeam].goalsFor += awayScore;
             teams[awayTeam].goalsAgainst += homeScore;
-            
+
+            let homeOutcome, awayOutcome;
             if (homeScore > awayScore) {
-                teams[homeTeam].won++;
-                teams[homeTeam].points += 3;
+                teams[homeTeam].won++; teams[homeTeam].points += 3;
                 teams[awayTeam].lost++;
+                homeOutcome = 'W'; awayOutcome = 'L';
             } else if (awayScore > homeScore) {
-                teams[awayTeam].won++;
-                teams[awayTeam].points += 3;
+                teams[awayTeam].won++; teams[awayTeam].points += 3;
                 teams[homeTeam].lost++;
+                homeOutcome = 'L'; awayOutcome = 'W';
             } else {
-                teams[homeTeam].drawn++;
-                teams[awayTeam].drawn++;
-                teams[homeTeam].points += 1;
-                teams[awayTeam].points += 1;
+                teams[homeTeam].drawn++; teams[homeTeam].points += 1;
+                teams[awayTeam].drawn++; teams[awayTeam].points += 1;
+                homeOutcome = 'D'; awayOutcome = 'D';
             }
-            
+
+            teamResults[homeTeam].push(homeOutcome);
+            teamResults[awayTeam].push(awayOutcome);
+
             teams[homeTeam].goalDifference = teams[homeTeam].goalsFor - teams[homeTeam].goalsAgainst;
             teams[awayTeam].goalDifference = teams[awayTeam].goalsFor - teams[awayTeam].goalsAgainst;
         });
-    
-    // Convert to array and sort
+
+    // Attach last-5 form
+    Object.keys(teams).forEach(name => {
+        teams[name].form = teamResults[name].slice(-5);
+    });
+
     return Object.values(teams).sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
         if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
         return a.name.localeCompare(b.name);
     });
+}
+
+function formHtml(form) {
+    if (!form || !form.length) return '<span class="text-gray-300 text-xs">—</span>';
+    return form.map(r => {
+        const cls = r === 'W' ? 'bg-green-500' : r === 'L' ? 'bg-red-500' : 'bg-gray-300';
+        return `<span class="inline-flex items-center justify-center w-5 h-5 rounded-full ${cls} text-white text-xs font-bold">${r}</span>`;
+    }).join('');
 }
 
 // Extract club name from team name (remove age group suffix)
@@ -2178,6 +2457,7 @@ function renderCombinedLadder() {
     `;
     
     container.innerHTML = html;
+    highlightFavouriteRows();
 }
 
 // Render age group ladders
@@ -2210,11 +2490,12 @@ function renderAgeGroupLadders() {
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">GA</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">GD</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Pts</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase hidden sm:table-cell">Form</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
         `;
-        
+
         ladder.forEach((team, index) => {
             const clubName = getClubName(team.name);
             laddersHtml += `
@@ -2235,6 +2516,7 @@ function renderAgeGroupLadders() {
                     <td class="px-4 py-3 text-center">${team.goalsAgainst}</td>
                     <td class="px-4 py-3 text-center font-semibold ${team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
                     <td class="px-4 py-3 text-center font-bold text-blue-600">${team.points}</td>
+                    <td class="px-4 py-3 hidden sm:table-cell"><div class="flex gap-1 justify-center">${formHtml(team.form)}</div></td>
                 </tr>
             `;
         });
@@ -2254,6 +2536,7 @@ function renderAgeGroupLadders() {
             el.style.display = el.dataset.league === selectedLadderLeague ? 'block' : 'none';
         });
     }
+    highlightFavouriteRows();
 }
 
 
