@@ -66,6 +66,29 @@ function main() {
         }
     }
 
+    // Build club → division index
+    const clubIndex = {}; // clubName → [divisionId, ...]
+    for (const id of divisionIds) {
+        const dataPath = path.join(dataDir, `${id}.json`);
+        if (!fs.existsSync(dataPath)) continue;
+        const data = JSON.parse(fs.readFileSync(dataPath));
+        const seen = new Set();
+        [...(data.results || []), ...(data.fixtures || [])].forEach(item => {
+            const a = item.attributes;
+            [a.home_team_name, a.away_team_name].forEach(name => {
+                if (!name) return;
+                const club = name.replace(/\s+(U\d+|Seniors|Reserves)$/i, '').trim();
+                if (!seen.has(club)) {
+                    seen.add(club);
+                    if (!clubIndex[club]) clubIndex[club] = [];
+                    if (!clubIndex[club].includes(id)) clubIndex[club].push(id);
+                }
+            });
+        });
+    }
+    fs.writeFileSync(path.join(dataDir, 'club-index.json'), JSON.stringify(clubIndex));
+    console.log(`Club index: ${Object.keys(clubIndex).length} clubs`);
+
     fs.writeFileSync(
         path.join(dataDir, 'last-updated.json'),
         JSON.stringify({ updatedAt: new Date().toISOString() })

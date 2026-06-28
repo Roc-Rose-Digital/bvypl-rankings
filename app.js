@@ -1555,10 +1555,17 @@ async function populateTeamBreakdown(clubName) {
     const el = document.getElementById('team-breakdown-section');
     if (!el) return;
 
-    await Promise.all(Object.keys(divisions.boys).map(id => loadDivisionData(id)));
+    // Load only the divisions this club plays in (from pre-built index)
+    let divisionIds = Object.keys(divisions.boys);
+    try {
+        const idx = await fetch('data/club-index.json').then(r => r.ok ? r.json() : null);
+        if (idx && idx[clubName]) divisionIds = idx[clubName].filter(id => divisions.boys[id]);
+    } catch (_) {}
+
+    await Promise.all(divisionIds.map(id => loadDivisionData(id)));
 
     const rows = [];
-    for (const divId of Object.keys(divisions.boys)) {
+    for (const divId of divisionIds) {
         const cached = divisionCache[divId];
         if (!cached || !cached.leagues.length) continue;
         const divName = divisions.boys[divId].fullName;
