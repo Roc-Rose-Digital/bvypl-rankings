@@ -116,27 +116,31 @@ async function loadData(gender = 'boys', divisionId = null) {
         selectedFixturePeriod = 'upcoming';
 
         // Show loading message
-        document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${allDivisions[divisionId].fullName} data from API...</div>`;
-        
-        const baseUrl = 'https://mc-api.dribl.com/api';
-        
-        // Fetch leagues from API and rounds from local file
-        const [leagues, rounds] = await Promise.all([
-            fetch(`${baseUrl}/list/leagues?season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX`).then(r => r.json()),
-            fetch('api-responses/rounds-api.json').then(r => r.json())
-        ]);
-        
-        leaguesData = leagues.data || [];
-        roundsData = rounds || [];
-        
-        // Fetch all fixtures and results for the competition using competition-level pagination
-        const [fixturesData_, resultsData_] = await Promise.all([
-            fetchAllCompetitionPages('fixtures', divisionId),
-            fetchAllCompetitionPages('results', divisionId),
-        ]);
+        document.getElementById('combined-ladder').innerHTML = `<div class="text-center py-8 text-gray-500">Loading ${allDivisions[divisionId].fullName}...</div>`;
 
-        fixturesData = fixturesData_;
-        resultsData = resultsData_;
+        const rounds = await fetch('api-responses/rounds-api.json').then(r => r.json()).catch(() => []);
+        roundsData = rounds || [];
+
+        // Try static pre-fetched data first; fall back to live API
+        let divData = null;
+        try {
+            const res = await fetch(`data/${divisionId}.json`);
+            if (res.ok) divData = await res.json();
+        } catch (_) {}
+
+        if (!divData) {
+            // Live API fallback
+            const leaguesJson = await fetch(`https://mc-api.dribl.com/api/list/leagues?season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX`).then(r => r.json());
+            const [fixtures, results] = await Promise.all([
+                fetchAllCompetitionPages('fixtures', divisionId),
+                fetchAllCompetitionPages('results', divisionId),
+            ]);
+            divData = { leagues: leaguesJson.data || [], fixtures, results };
+        }
+
+        leaguesData = divData.leagues || [];
+        fixturesData = divData.fixtures || [];
+        resultsData = divData.results || [];
         divisionCache[divisionId] = { leagues: leaguesData, results: resultsData, fixtures: fixturesData };
 
         initializeApp();
