@@ -100,8 +100,17 @@ async function fetchAllCompetitionPages(endpoint, divisionId) {
 
 async function loadDivisionData(divisionId) {
     if (divisionCache[divisionId]) return divisionCache[divisionId];
-    const baseUrl = 'https://mc-api.dribl.com/api';
     try {
+        const res = await fetch(`data/${divisionId}.json`);
+        if (res.ok) {
+            const d = await res.json();
+            divisionCache[divisionId] = { leagues: d.leagues || [], results: d.results || [], fixtures: d.fixtures || [] };
+            return divisionCache[divisionId];
+        }
+    } catch (_) {}
+    // Fall back to live API
+    try {
+        const baseUrl = 'https://mc-api.dribl.com/api';
         const leaguesJson = await fetch(`${baseUrl}/list/leagues?season=nPmrj2rmow&competition=${divisionId}&tenant=w8zdBWPmBX`).then(r => r.json());
         const leagues = leaguesJson.data || [];
         const [results, fixtures] = await Promise.all([
