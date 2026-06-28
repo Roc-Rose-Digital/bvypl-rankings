@@ -1573,7 +1573,7 @@ async function populateTeamBreakdown(clubName) {
                     <td class="py-2 px-4 text-center text-sm">${team.goalsAgainst}</td>
                     <td class="py-2 px-4 text-center text-sm font-semibold ${team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
                     <td class="py-2 px-4 text-center text-sm font-bold text-blue-600">${team.points}</td>
-                    <td class="py-2 px-4 hidden sm:table-cell"><div class="flex gap-1 justify-center">${formHtml(team.form)}</div></td>
+                    <td class="py-2 px-4"><div class="flex gap-1 justify-center">${formHtml(team.form)}</div></td>
                 </tr>`);
         });
     }
@@ -1596,7 +1596,7 @@ async function populateTeamBreakdown(clubName) {
                                 <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GA</th>
                                 <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">GD</th>
                                 <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Pts</th>
-                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Form</th>
+                                <th class="py-2 px-4 text-center text-xs font-semibold text-gray-500 uppercase">Form</th>
                             </tr>
                         </thead>
                         <tbody>${rows.join('')}</tbody>
@@ -2490,7 +2490,7 @@ function renderAgeGroupLadders() {
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">GA</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">GD</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Pts</th>
-                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase hidden sm:table-cell">Form</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Form</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
@@ -2516,7 +2516,7 @@ function renderAgeGroupLadders() {
                     <td class="px-4 py-3 text-center">${team.goalsAgainst}</td>
                     <td class="px-4 py-3 text-center font-semibold ${team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
                     <td class="px-4 py-3 text-center font-bold text-blue-600">${team.points}</td>
-                    <td class="px-4 py-3 hidden sm:table-cell"><div class="flex gap-1 justify-center">${formHtml(team.form)}</div></td>
+                    <td class="px-4 py-3"><div class="flex gap-1 justify-center">${formHtml(team.form)}</div></td>
                 </tr>
             `;
         });
