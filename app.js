@@ -2248,6 +2248,12 @@ function renderAgeGroupLadders() {
     });
     
     laddersContainer.innerHTML = laddersHtml;
+
+    if (selectedLadderLeague) {
+        laddersContainer.querySelectorAll('.age-group-ladder').forEach(el => {
+            el.style.display = el.dataset.league === selectedLadderLeague ? 'block' : 'none';
+        });
+    }
 }
 
 
