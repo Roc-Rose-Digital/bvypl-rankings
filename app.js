@@ -1189,16 +1189,22 @@ async function renderMatchDetail(id, type) {
         summaryEl.innerHTML = centreHtml + renderStandingsAtMatch(attrs);
     }
 
-    // If this was a fixture but match centre has a score, update the header score display
+    // If this was a fixture but match centre has goal events, derive final score from last goal event
     if (!isResult && centreResult && centreResult.data) {
-        const ca = centreResult.data.attributes;
-        if (ca && ca.home_score != null && ca.away_score != null) {
+        const ca = centreResult.data.attributes || {};
+        const goalEvents = (ca.match_events || [])
+            .filter(ev => ev.type === 'goal')
+            .sort((a, b) => (parseInt(a.minute) || 0) - (parseInt(b.minute) || 0));
+        const hasResult = goalEvents.length > 0 || ca.home_score_half != null;
+        if (hasResult) {
+            const hs = goalEvents.length ? goalEvents[goalEvents.length - 1].home_score : 0;
+            const as_ = goalEvents.length ? goalEvents[goalEvents.length - 1].away_score : 0;
             const scoreEl = document.getElementById('match-score');
             if (scoreEl) {
                 scoreEl.outerHTML = `<div id="match-score" class="flex items-center justify-center gap-2 sm:gap-4 text-2xl sm:text-4xl font-bold my-2 sm:my-4">
-                    <span class="${ca.home_score > ca.away_score ? 'text-green-600' : 'text-gray-700'}">${ca.home_score}</span>
+                    <span class="${hs > as_ ? 'text-green-600' : 'text-gray-700'}">${hs}</span>
                     <span class="text-gray-400">-</span>
-                    <span class="${ca.away_score > ca.home_score ? 'text-green-600' : 'text-gray-700'}">${ca.away_score}</span>
+                    <span class="${as_ > hs ? 'text-green-600' : 'text-gray-700'}">${as_}</span>
                 </div>`;
             }
         }
