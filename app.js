@@ -1116,12 +1116,12 @@ async function renderMatchDetail(id, type) {
     const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
 
     const scoreHtml = isResult
-        ? `<div class="flex items-center justify-center gap-2 sm:gap-4 text-2xl sm:text-4xl font-bold my-2 sm:my-4">
+        ? `<div id="match-score" class="flex items-center justify-center gap-2 sm:gap-4 text-2xl sm:text-4xl font-bold my-2 sm:my-4">
                <span class="${attrs.home_score > attrs.away_score ? 'text-green-600' : 'text-gray-700'}">${attrs.home_score}</span>
                <span class="text-gray-400">-</span>
                <span class="${attrs.away_score > attrs.home_score ? 'text-green-600' : 'text-gray-700'}">${attrs.away_score}</span>
            </div>`
-        : `<div class="text-center text-lg sm:text-2xl font-bold text-gray-400 my-2 sm:my-4">vs</div>`;
+        : `<div id="match-score" class="text-center text-lg sm:text-2xl font-bold text-gray-400 my-2 sm:my-4">vs</div>`;
 
     const headerHtml = `
         <button onclick="history.back()" class="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold">
@@ -1187,6 +1187,21 @@ async function renderMatchDetail(id, type) {
     if (summaryEl) {
         const centreHtml = (centreResult && centreResult.data) ? renderMatchCentre(centreResult.data) : '<div class="text-center py-4 text-gray-400 text-sm">No match centre data available.</div>';
         summaryEl.innerHTML = centreHtml + renderStandingsAtMatch(attrs);
+    }
+
+    // If this was a fixture but match centre has a score, update the header score display
+    if (!isResult && centreResult && centreResult.data) {
+        const ca = centreResult.data.attributes;
+        if (ca && ca.home_score != null && ca.away_score != null) {
+            const scoreEl = document.getElementById('match-score');
+            if (scoreEl) {
+                scoreEl.outerHTML = `<div id="match-score" class="flex items-center justify-center gap-2 sm:gap-4 text-2xl sm:text-4xl font-bold my-2 sm:my-4">
+                    <span class="${ca.home_score > ca.away_score ? 'text-green-600' : 'text-gray-700'}">${ca.home_score}</span>
+                    <span class="text-gray-400">-</span>
+                    <span class="${ca.away_score > ca.home_score ? 'text-green-600' : 'text-gray-700'}">${ca.away_score}</span>
+                </div>`;
+            }
+        }
     }
     if (homeEl) homeEl.innerHTML = homeResult ? renderLineup(homeResult, attrs.home_team_name, attrs.home_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
     if (awayEl) awayEl.innerHTML = awayResult ? renderLineup(awayResult, attrs.away_team_name, attrs.away_logo) : '<div class="text-center py-4 text-gray-400 text-sm">No lineup data.</div>';
