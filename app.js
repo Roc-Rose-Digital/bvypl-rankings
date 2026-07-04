@@ -2641,7 +2641,8 @@ function renderFixtures() {
             const date = new Date(attrs.date);
             const dateStr = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             const timeStr = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
-            
+            const isPast = date < new Date();
+
             html += `
                 <div class="stripe-row p-3 sm:p-6 hover:bg-blue-50 border-b border-gray-100 cursor-pointer"
                      onclick="navigateToMatch('${escAttr(fixture.hash_id)}', 'fixture')">
@@ -2650,6 +2651,7 @@ function renderFixtures() {
                         <div class="text-xs sm:text-sm text-gray-600 w-20 sm:w-32 flex-shrink-0">
                             <div class="font-medium">${escHtml(dateStr)}</div>
                             <div>${escHtml(timeStr)}</div>
+                            ${isPast ? `<div class="text-orange-500 font-semibold text-xs mt-0.5">Awaiting result</div>` : ''}
                         </div>
 
                         <!-- Teams and Info -->
