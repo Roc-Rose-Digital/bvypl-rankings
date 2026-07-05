@@ -8,11 +8,18 @@ const TIMEZONE = 'Australia%2FSydney';
 const CURL_HEADERS = [
     '-H "Referer: https://fv.dribl.com/"',
     '-H "Origin: https://fv.dribl.com"',
-    '-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"',
+    '-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"',
     '-H "Accept: application/json, text/plain, */*"',
+    '-H "Accept-Language: en-AU,en-GB;q=0.9,en;q=0.8"',
+    '-H "Accept-Encoding: gzip, deflate, br, zstd"',
+    '-H "sec-ch-ua: \\"Google Chrome\\";v=\\"137\\", \\"Chromium\\";v=\\"137\\", \\"Not/A)Brand\\";v=\\"24\\""',
+    '-H "sec-ch-ua-mobile: ?0"',
+    '-H "sec-ch-ua-platform: \\"Windows\\""',
     '-H "sec-fetch-site: same-site"',
     '-H "sec-fetch-mode: cors"',
     '-H "sec-fetch-dest: empty"',
+    '-H "sec-fetch-storage-access: active"',
+    '--compressed',
 ].join(' ');
 
 const divisionIds = [
@@ -25,7 +32,11 @@ const divisionIds = [
 ];
 
 function curlGet(url) {
-    const raw = execSync(`curl -s ${CURL_HEADERS} "${url}"`, { maxBuffer: 50 * 1024 * 1024 }).toString();
+    const raw = execSync(`curl -s -L ${CURL_HEADERS} "${url}"`, { maxBuffer: 50 * 1024 * 1024 }).toString();
+    if (raw.trimStart().startsWith('<')) {
+        const preview = raw.slice(0, 200).replace(/\n/g, ' ');
+        throw new Error(`Got HTML instead of JSON (Cloudflare block?): ${preview}`);
+    }
     return JSON.parse(raw);
 }
 
