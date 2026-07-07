@@ -31,11 +31,14 @@ const divisionIds = [
     'Rxm8RpZLKr', 'gld4pXoDdW', 'jJmXQb5WNn',
 ];
 
+const PROXY = 'https://dribl-proxy.delicate-flower-260d.workers.dev';
+
 function curlGet(url) {
-    const raw = execSync(`curl -s -L ${CURL_HEADERS} "${url}"`, { maxBuffer: 50 * 1024 * 1024 }).toString();
+    const proxied = url.replace('https://mc-api.dribl.com', PROXY);
+    const raw = execSync(`curl -s "${proxied}"`, { maxBuffer: 50 * 1024 * 1024 }).toString();
     if (raw.trimStart().startsWith('<')) {
         const preview = raw.slice(0, 200).replace(/\n/g, ' ');
-        throw new Error(`Got HTML instead of JSON (Cloudflare block?): ${preview}`);
+        throw new Error(`Got HTML instead of JSON: ${preview}`);
     }
     return JSON.parse(raw);
 }

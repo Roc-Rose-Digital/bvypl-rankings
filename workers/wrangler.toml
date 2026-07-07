@@ -1,0 +1,3 @@
+name = "dribl-proxy"
+main = "dribl-proxy.js"
+compatibility_date = "2025-07-07"
