@@ -1817,6 +1817,7 @@ async function populateSquadAndStats(clubName) {
         }
     }
 
+    const teamKeys = Object.keys(teamMatches);
     if (!teamKeys.length) {
         ['team-stats-section', 'team-squad-section'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
         return;
