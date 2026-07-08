@@ -1799,8 +1799,9 @@ async function populateSquadAndStats(clubName) {
                r.includes('physio') || r.includes('trainer') || r.includes('doctor');
     };
 
-    // Collect all results for each team of this club
-    const teamMatches = {}; // fullTeamName → [{ matchHashId, teamHashId, isHome, attrs }]
+    // Collect all results for each team of this club, keyed by teamHashId to avoid
+    // merging same-named teams from different divisions (e.g. men's and women's Seniors)
+    const teamMatches = {}; // teamHashId → { name, league, hashId, matches[] }
     for (const divData of Object.values(divisionCache)) {
         for (const result of (divData.results || [])) {
             const attrs = result.attributes || {};
@@ -1811,31 +1812,32 @@ async function populateSquadAndStats(clubName) {
             const teamName = isHome ? attrs.home_team_name : attrs.away_team_name;
             const teamHashId = isHome ? attrs.home_team_hash_id : attrs.away_team_hash_id;
             if (!teamHashId) continue;
-            if (!teamMatches[teamName]) teamMatches[teamName] = [];
-            teamMatches[teamName].push({ matchHashId: attrs.match_hash_id, teamHashId, isHome, attrs });
+            if (!teamMatches[teamHashId]) teamMatches[teamHashId] = { name: teamName, league: attrs.league_name || '', hashId: teamHashId, matches: [] };
+            teamMatches[teamHashId].matches.push({ matchHashId: attrs.match_hash_id, teamHashId, isHome, attrs });
         }
     }
 
-    const teamNames = Object.keys(teamMatches);
-    if (!teamNames.length) {
+    if (!teamKeys.length) {
         ['team-stats-section', 'team-squad-section'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
         return;
     }
 
     // Fetch all lineups per team in parallel
     const teamLineups = {};
-    await Promise.all(teamNames.map(async (teamName) => {
-        const lineups = await Promise.all(teamMatches[teamName].map(m =>
-            fetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${m.matchHashId}/team/${m.teamHashId}?tenant=w8zdBWPmBX`)
+    await Promise.all(teamKeys.map(async (key) => {
+        const { hashId, matches } = teamMatches[key];
+        const lineups = await Promise.all(matches.map(m =>
+            fetch(`https://mc-api.dribl.com/api/matchcentre-match-members/match/${m.matchHashId}/team/${hashId}?tenant=w8zdBWPmBX`)
                 .then(r => r.ok ? r.json() : null).catch(() => null)
         ));
-        teamLineups[teamName] = lineups.filter(Boolean);
+        teamLineups[key] = lineups.filter(Boolean);
     }));
 
     // Aggregate per team
     const teamData = {};
-    for (const teamName of teamNames) {
-        const lineups = teamLineups[teamName] || [];
+    for (const key of teamKeys) {
+        const { name: teamName, matches } = teamMatches[key];
+        const lineups = teamLineups[key] || [];
         const players = {};
         let yellows = 0, reds = 0;
 
@@ -1861,27 +1863,41 @@ async function populateSquadAndStats(clubName) {
 
         // Goals/conceded/clean sheets from results
         let goalsFor = 0, goalsAgainst = 0, cleanSheets = 0;
-        for (const m of teamMatches[teamName]) {
+        for (const m of matches) {
             const gf = parseInt(m.isHome ? m.attrs.home_score : m.attrs.away_score) || 0;
             const ga = parseInt(m.isHome ? m.attrs.away_score : m.attrs.home_score) || 0;
             goalsFor += gf; goalsAgainst += ga;
             if (ga === 0) cleanSheets++;
         }
 
-        teamData[teamName] = {
+        teamData[key] = {
             players: Object.values(players).sort((a, b) => b.appearances - a.appearances),
             goalsFor, goalsAgainst, cleanSheets, yellows, reds,
-            gamesPlayed: teamMatches[teamName].length
+            gamesPlayed: matches.length
         };
     }
 
-    const isSingle = teamNames.length === 1;
-    const sortedTeams = teamNames.sort((a, b) => {
-        const ka = leagueSortKey(a), kb = leagueSortKey(b);
+    const isSingle = teamKeys.length === 1;
+    const sortedTeams = teamKeys.sort((a, b) => {
+        const ka = leagueSortKey(teamMatches[a].name), kb = leagueSortKey(teamMatches[b].name);
         return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2]);
     });
 
-    const renderTeamPanel = (teamName, d) => {
+    // Build tab labels — when two teams share the same short label, append gender from league name
+    const shortLabel = key => teamMatches[key].name.match(/U\d+|Seniors|Reserves/i)?.[0] || teamMatches[key].name;
+    const labelCounts = {};
+    sortedTeams.forEach(k => { const l = shortLabel(k); labelCounts[l] = (labelCounts[l] || 0) + 1; });
+    const tabLabel = key => {
+        const base = shortLabel(key);
+        if (labelCounts[base] > 1) {
+            const gender = teamMatches[key].league.match(/\b(Men|Women|Boys|Girls|Male|Female)\b/i)?.[1] || teamMatches[key].league;
+            return gender ? `${base} (${gender})` : `${base} (${teamMatches[key].name})`;
+        }
+        return base;
+    };
+
+    const renderTeamPanel = (key, d) => {
+        const teamName = teamMatches[key]?.name || key;
         const topScorers = [...d.players].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0).slice(0, 10);
         const scorersHtml = topScorers.length ? `
             <div class="mb-6">
@@ -1952,15 +1968,14 @@ async function populateSquadAndStats(clubName) {
             const d = teamData[sortedTeams[0]];
             statsEl.innerHTML = d ? renderTeamPanel(sortedTeams[0], d) : '';
         } else {
-            const tabLabel = name => name.match(/U\d+|Seniors|Reserves/i)?.[0] || name;
-            const tabBtns = sortedTeams.map((name, i) =>
+            const tabBtns = sortedTeams.map((key, i) =>
                 `<button id="squad-stab-btn-${i}" onclick="showSquadSubTab(${i})"
                     class="px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${i === 0 ? 'tab-active border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-blue-600'}"
-                >${escHtml(tabLabel(name))}</button>`
+                >${escHtml(tabLabel(key))}</button>`
             ).join('');
-            const panels = sortedTeams.map((name, i) => {
-                const d = teamData[name];
-                return `<div id="squad-stab-panel-${i}" ${i > 0 ? 'class="hidden"' : ''}>${d ? renderTeamPanel(name, d) : ''}</div>`;
+            const panels = sortedTeams.map((key, i) => {
+                const d = teamData[key];
+                return `<div id="squad-stab-panel-${i}" ${i > 0 ? 'class="hidden"' : ''}>${d ? renderTeamPanel(key, d) : ''}</div>`;
             }).join('');
             statsEl.innerHTML = `
                 <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
